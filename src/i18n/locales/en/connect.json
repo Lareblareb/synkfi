@@ -1,0 +1,28 @@
+{
+  "title": "Let's",
+  "titleAccent": "connect.",
+  "filters": {
+    "student": "A student looking to join",
+    "organization": "An organization interested in collaboration",
+    "idea": "Someone with an idea to build with us"
+  },
+  "directory": "Community",
+  "featured": "Our Team",
+  "members": "Members",
+  "noMembers": "No members found",
+  "noMembersHint": "Be the first to join the Synk community",
+  "connect": "Connect",
+  "connected": "Connected",
+  "pending": "Pending",
+  "message": "Message",
+  "viewProfile": "View Profile",
+  "connectionSent": "Connection request sent!",
+  "connectionAccepted": "Connection accepted!",
+  "publicProfile": {
+    "events": "Events",
+    "connections": "Connections",
+    "sports": "Sports",
+    "mutualConnections": "Mutual Connections",
+    "noMutual": "No mutual connections yet"
+  }
+}

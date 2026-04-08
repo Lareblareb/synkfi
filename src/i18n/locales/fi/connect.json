@@ -1,0 +1,28 @@
+{
+  "title": "Otetaan",
+  "titleAccent": "yhteyttä.",
+  "filters": {
+    "student": "Opiskelija joka haluaa liittyä",
+    "organization": "Järjestö joka on kiinnostunut yhteistyöstä",
+    "idea": "Joku jolla on idea rakennettavaksi"
+  },
+  "directory": "Yhteisö",
+  "featured": "Tiimimme",
+  "members": "Jäsenet",
+  "noMembers": "Jäseniä ei löytynyt",
+  "noMembersHint": "Ole ensimmäinen joka liittyy Synk-yhteisöön",
+  "connect": "Yhdisty",
+  "connected": "Yhdistetty",
+  "pending": "Odottaa",
+  "message": "Viesti",
+  "viewProfile": "Näytä profiili",
+  "connectionSent": "Yhteyspyyntö lähetetty!",
+  "connectionAccepted": "Yhteys hyväksytty!",
+  "publicProfile": {
+    "events": "Tapahtumat",
+    "connections": "Yhteydet",
+    "sports": "Urheilulajit",
+    "mutualConnections": "Yhteiset yhteydet",
+    "noMutual": "Ei vielä yhteisiä yhteyksiä"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "title": "Messages",
+  "inbox": "Inbox",
+  "noConversations": "No messages yet",
+  "noConversationsHint": "Join an event to start chatting with other participants",
+  "groupChat": "Group Chat",
+  "directMessage": "Direct Message",
+  "typeMessage": "Type a message...",
+  "send": "Send",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "you": "You",
+  "unread": "{{count}} unread",
+  "participants": "{{count}} participants",
+  "messageDeleted": "Message deleted",
+  "emptyChat": "No messages yet. Say hello! 👋",
+  "emptyChatHint": "Be the first to send a message in this group",
+  "emptyDirectChat": "Start a conversation",
+  "emptyDirectChatHint": "Send a message to get started"
+}

@@ -1,0 +1,20 @@
+{
+  "title": "Viestit",
+  "inbox": "Saapuneet",
+  "noConversations": "Ei vielä viestejä",
+  "noConversationsHint": "Liity tapahtumaan aloittaaksesi keskustelun muiden osallistujien kanssa",
+  "groupChat": "Ryhmäkeskustelu",
+  "directMessage": "Yksityisviesti",
+  "typeMessage": "Kirjoita viesti...",
+  "send": "Lähetä",
+  "today": "Tänään",
+  "yesterday": "Eilen",
+  "you": "Sinä",
+  "unread": "{{count}} lukematonta",
+  "participants": "{{count}} osallistujaa",
+  "messageDeleted": "Viesti poistettu",
+  "emptyChat": "Ei vielä viestejä. Sano moi! 👋",
+  "emptyChatHint": "Ole ensimmäinen joka lähettää viestin tässä ryhmässä",
+  "emptyDirectChat": "Aloita keskustelu",
+  "emptyDirectChatHint": "Lähetä viesti päästäksesi alkuun"
+}

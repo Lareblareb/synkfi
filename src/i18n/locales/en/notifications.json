@@ -1,0 +1,26 @@
+{
+  "title": "Notifications",
+  "empty": "No notifications yet",
+  "emptyHint": "You'll see updates about events, messages, and connections here",
+  "markAllRead": "Mark all as read",
+  "types": {
+    "event_join": "{{name}} joined your event",
+    "event_update": "Event updated",
+    "event_cancel": "Event cancelled",
+    "event_reminder": "Event reminder",
+    "chat_message": "New message from {{name}}",
+    "chat_group": "New message in {{event}}",
+    "payment_success": "Payment confirmed",
+    "payment_failed": "Payment failed",
+    "connection_request": "{{name}} wants to connect",
+    "connection_accepted": "{{name}} accepted your connection",
+    "nearby_event": "New event near you"
+  },
+  "timeAgo": {
+    "justNow": "Just now",
+    "minutes": "{{count}}m ago",
+    "hours": "{{count}}h ago",
+    "days": "{{count}}d ago",
+    "weeks": "{{count}}w ago"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "heroTitle": "Redefining how students",
+  "heroTitleAccent": "connect.",
+  "mission": "SYNK is a student-focused initiative redefining how students form meaningful connections. By centring community around sport rather than conventional networking, we make it straightforward to find teammates, join organised activities, and build an active social presence on campus. Our mission is simple: play to connect.",
+  "pullQuote": "Our mission is simple: play to connect.",
+  "pillarsTitle": "What we believe",
+  "pillars": {
+    "playFirst": {
+      "emoji": "⚡",
+      "title": "Play First",
+      "description": "We replace small talk with sport. Shared physical activity creates genuine rapport with no forced ice-breakers required."
+    },
+    "inclusive": {
+      "emoji": "🤝",
+      "title": "Inclusive by Design",
+      "description": "No prior experience necessary. Every skill level is welcome."
+    },
+    "community": {
+      "emoji": "🌱",
+      "title": "Community-Driven",
+      "description": "Built by students, run by students, shaped by students."
+    },
+    "wellbeing": {
+      "emoji": "💚",
+      "title": "Student Wellbeing",
+      "description": "Physical activity and social connection are both fundamental to student wellbeing. Synk supports both simultaneously."
+    }
+  },
+  "activitiesTitle": "More than events —",
+  "activitiesTitleAccent": "shared experiences.",
+  "activities": {
+    "sportNetworking": {
+      "emoji": "🏃",
+      "title": "Sport-Based Networking",
+      "description": "Structured play sessions open to all skill levels where connection happens through movement, not forced conversation."
+    },
+    "matchmaking": {
+      "emoji": "🤝",
+      "title": "Matchmaking Activities",
+      "description": "Participants are paired into teams so no one arrives or leaves alone."
+    },
+    "gameNights": {
+      "emoji": "🎲",
+      "title": "Casual Game Nights",
+      "description": "Board games, team challenges, and light competitive formats."
+    },
+    "tournaments": {
+      "emoji": "🏆",
+      "title": "Community Tournaments",
+      "description": "Friendly competitions between student groups, residencies, and departments."
+    },
+    "orgCollabs": {
+      "emoji": "🏛️",
+      "title": "Organisation Collaborations",
+      "description": "Co-hosted events with student organisations."
+    },
+    "campusActivations": {
+      "emoji": "📍",
+      "title": "Campus Activations",
+      "description": "Pop-up events and open sessions across campus."
+    }
+  },
+  "collabTitle": "Let's build community",
+  "collabTitleAccent": "together.",
+  "collabItems": {
+    "coHosted": "Co-hosted Events",
+    "campusActivations": "Campus Activations",
+    "brandPartnerships": "Brand Partnerships",
+    "communityDriven": "Community-Driven Initiatives"
+  },
+  "letsTalk": "Let's Talk",
+  "footer": {
+    "tagline": "play to connect.",
+    "bottomNote": "© 2024 Synk. Made with ❤️ by students in Helsinki."
+  }
+}
