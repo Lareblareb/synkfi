@@ -1,0 +1,76 @@
+{
+  "heroTitle": "Uudelleenmäärittely miten opiskelijat",
+  "heroTitleAccent": "yhdistyvät.",
+  "mission": "SYNK on opiskelijakeskeinen aloite, joka määrittelee uudelleen miten opiskelijat muodostavat merkityksellisiä yhteyksiä. Keskittämällä yhteisön urheilun ympärille perinteisen verkostoitumisen sijaan, teemme helpoksi löytää joukkuekavereita, liittyä järjestettyihin aktiviteetteihin ja rakentaa aktiivista sosiaalista läsnäoloa kampuksella. Tehtävämme on yksinkertainen: pelaa ja yhdisty.",
+  "pullQuote": "Tehtävämme on yksinkertainen: pelaa ja yhdisty.",
+  "pillarsTitle": "Mihin uskomme",
+  "pillars": {
+    "playFirst": {
+      "emoji": "⚡",
+      "title": "Peli ensin",
+      "description": "Korvaamme small talkin urheilulla. Jaettu fyysinen aktiviteetti luo aidon yhteyden ilman pakotettuja jäänmurtajia."
+    },
+    "inclusive": {
+      "emoji": "🤝",
+      "title": "Inklusiivinen lähtökohtaisesti",
+      "description": "Aiempaa kokemusta ei tarvita. Kaikki taitotasot ovat tervetulleita."
+    },
+    "community": {
+      "emoji": "🌱",
+      "title": "Yhteisövetoinen",
+      "description": "Opiskelijoiden rakentama, opiskelijoiden pyörittämä, opiskelijoiden muovaama."
+    },
+    "wellbeing": {
+      "emoji": "💚",
+      "title": "Opiskelijoiden hyvinvointi",
+      "description": "Fyysinen aktiivisuus ja sosiaaliset yhteydet ovat molemmat olennaisia opiskelijoiden hyvinvoinnille. Synk tukee molempia samanaikaisesti."
+    }
+  },
+  "activitiesTitle": "Enemmän kuin tapahtumia —",
+  "activitiesTitleAccent": "jaettuja kokemuksia.",
+  "activities": {
+    "sportNetworking": {
+      "emoji": "🏃",
+      "title": "Urheilupohjainen verkostoituminen",
+      "description": "Järjestettyjä pelituokioita kaikille taitotasoille, joissa yhteys syntyy liikkeen kautta, ei pakotetun keskustelun."
+    },
+    "matchmaking": {
+      "emoji": "🤝",
+      "title": "Matchmaking-aktiviteetit",
+      "description": "Osallistujat jaetaan joukkueisiin, joten kukaan ei saavu tai lähde yksin."
+    },
+    "gameNights": {
+      "emoji": "🎲",
+      "title": "Rennot peli-illat",
+      "description": "Lautapelejä, joukkuehaasteita ja kevyitä kilpailumuotoja."
+    },
+    "tournaments": {
+      "emoji": "🏆",
+      "title": "Yhteisöturnaukset",
+      "description": "Ystävällisiä kilpailuja opiskelijaryhmien, asuntoloiden ja osastojen välillä."
+    },
+    "orgCollabs": {
+      "emoji": "🏛️",
+      "title": "Järjestöyhteistyöt",
+      "description": "Yhdessä järjestettyjä tapahtumia opiskelijajärjestöjen kanssa."
+    },
+    "campusActivations": {
+      "emoji": "📍",
+      "title": "Kampusaktivointeja",
+      "description": "Pop-up-tapahtumia ja avoimia tuokioita kampuksella."
+    }
+  },
+  "collabTitle": "Rakennetaan yhteisöä",
+  "collabTitleAccent": "yhdessä.",
+  "collabItems": {
+    "coHosted": "Yhteiset tapahtumat",
+    "campusActivations": "Kampusaktivoinnit",
+    "brandPartnerships": "Brändikumppanuudet",
+    "communityDriven": "Yhteisövetoiset aloitteet"
+  },
+  "letsTalk": "Ota yhteyttä",
+  "footer": {
+    "tagline": "pelaa ja yhdisty.",
+    "bottomNote": "© 2024 Synk. Tehty rakkaudella ❤️ opiskelijoiden toimesta Helsingissä."
+  }
+}

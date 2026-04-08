@@ -1,0 +1,36 @@
+{
+  "title": "Discovery",
+  "mapView": "Map",
+  "listView": "List",
+  "filters": "Filters",
+  "filterTitle": "Filter Events",
+  "sportType": "Sport Type",
+  "skillLevel": "Skill Level",
+  "distance": "Distance",
+  "dateRange": "Date",
+  "gender": "Gender",
+  "applyFilters": "Apply Filters",
+  "clearFilters": "Clear All",
+  "noEvents": "No events found nearby",
+  "noEventsHint": "Try expanding your search radius or changing filters",
+  "nearYou": "Near You",
+  "popular": "Popular",
+  "upcoming": "Upcoming",
+  "searchPlaceholder": "Search events...",
+  "distanceAway": "{{distance}} km away",
+  "participantsCount": "{{current}}/{{max}} joined",
+  "perPerson": "{{cost}} per person",
+  "genderOptions": {
+    "any": "Any",
+    "men": "Men",
+    "women": "Women",
+    "mixed": "Mixed"
+  },
+  "skillOptions": {
+    "any": "Any Level",
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "pro": "Pro"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "title": "Löydä",
+  "mapView": "Kartta",
+  "listView": "Lista",
+  "filters": "Suodattimet",
+  "filterTitle": "Suodata tapahtumia",
+  "sportType": "Urheilulaji",
+  "skillLevel": "Taitotaso",
+  "distance": "Etäisyys",
+  "dateRange": "Päivämäärä",
+  "gender": "Sukupuoli",
+  "applyFilters": "Käytä suodattimia",
+  "clearFilters": "Tyhjennä kaikki",
+  "noEvents": "Tapahtumia ei löytynyt läheltä",
+  "noEventsHint": "Kokeile laajentaa hakuetäisyyttä tai vaihda suodattimia",
+  "nearYou": "Lähellä sinua",
+  "popular": "Suositut",
+  "upcoming": "Tulevat",
+  "searchPlaceholder": "Hae tapahtumia...",
+  "distanceAway": "{{distance}} km päässä",
+  "participantsCount": "{{current}}/{{max}} osallistujaa",
+  "perPerson": "{{cost}} per henkilö",
+  "genderOptions": {
+    "any": "Mikä tahansa",
+    "men": "Miehet",
+    "women": "Naiset",
+    "mixed": "Sekajoukko"
+  },
+  "skillOptions": {
+    "any": "Kaikki tasot",
+    "beginner": "Aloittelija",
+    "intermediate": "Keskitaso",
+    "advanced": "Edistynyt",
+    "pro": "Ammattilainen"
+  }
+}

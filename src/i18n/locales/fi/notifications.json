@@ -1,0 +1,26 @@
+{
+  "title": "Ilmoitukset",
+  "empty": "Ei vielä ilmoituksia",
+  "emptyHint": "Näet tässä päivitykset tapahtumista, viesteistä ja yhteyksistä",
+  "markAllRead": "Merkitse kaikki luetuiksi",
+  "types": {
+    "event_join": "{{name}} liittyi tapahtumaasi",
+    "event_update": "Tapahtuma päivitetty",
+    "event_cancel": "Tapahtuma peruutettu",
+    "event_reminder": "Tapahtumamuistutus",
+    "chat_message": "Uusi viesti käyttäjältä {{name}}",
+    "chat_group": "Uusi viesti tapahtumassa {{event}}",
+    "payment_success": "Maksu vahvistettu",
+    "payment_failed": "Maksu epäonnistui",
+    "connection_request": "{{name}} haluaa yhdistyä",
+    "connection_accepted": "{{name}} hyväksyi yhteyspyyntösi",
+    "nearby_event": "Uusi tapahtuma lähellä sinua"
+  },
+  "timeAgo": {
+    "justNow": "Juuri nyt",
+    "minutes": "{{count}} min sitten",
+    "hours": "{{count}} t sitten",
+    "days": "{{count}} pv sitten",
+    "weeks": "{{count}} vk sitten"
+  }
+}
