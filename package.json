@@ -19,7 +19,6 @@
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.9.26",
-    "@rnmapbox/maps": "10.1.30",
     "@stripe/stripe-react-native": "0.38.6",
     "@supabase/supabase-js": "^2.45.0",
     "base64-arraybuffer": "^1.0.2",
@@ -54,8 +53,5 @@
     "@types/react": "~18.2.79",
     "tailwindcss": "3.4.0",
     "typescript": "~5.3.3"
-  },
-  "overrides": {
-    "@rnmapbox/maps": "10.1.30"
   }
 }
