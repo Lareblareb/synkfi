@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useChatStore } from '../store/chat';
 import { useAuthStore } from '../store/auth';
 import { chatService } from '../services/chat';
+import { supabase } from '../services/supabase';
 import { ChatMessage } from '../types/chat.types';
 
 export const useChat = () => {
@@ -29,11 +30,12 @@ export const useGroupChat = (eventId: string) => {
     store.fetchGroupMessages(eventId);
 
     const channel = chatService.subscribeToGroupMessages(eventId, async (payload) => {
-      if ((payload as Record<string, unknown>).sender_id !== user?.id) {
-        const { data } = await (await import('../services/supabase')).supabase
+      const senderId = (payload as Record<string, unknown>).sender_id as string;
+      if (senderId !== user?.id) {
+        const { data } = await supabase
           .from('users')
           .select('id, name, avatar_url')
-          .eq('id', (payload as Record<string, unknown>).sender_id)
+          .eq('id', senderId)
           .single();
 
         if (data) {
@@ -74,10 +76,9 @@ export const useDirectChat = (otherUserId: string) => {
     store.fetchDirectMessages(user.id, otherUserId);
 
     const channel = chatService.subscribeToDirectMessages(user.id, async (payload) => {
-      if (
-        (payload as Record<string, unknown>).sender_id === otherUserId
-      ) {
-        const { data } = await (await import('../services/supabase')).supabase
+      const senderId = (payload as Record<string, unknown>).sender_id as string;
+      if (senderId === otherUserId) {
+        const { data } = await supabase
           .from('users')
           .select('id, name, avatar_url')
           .eq('id', otherUserId)

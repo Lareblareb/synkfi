@@ -44,7 +44,7 @@ const App: React.FC = () => {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StripeProvider
-          publishableKey={STRIPE_PUBLISHABLE_KEY}
+          publishableKey={STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder'}
           merchantIdentifier="merchant.com.synk.app"
         >
           <NavigationContainer theme={theme}>
