@@ -6,6 +6,18 @@ import { Database } from '../types/database.types';
 const supabaseUrl = SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
+export const IS_SUPABASE_CONFIGURED =
+  !!SUPABASE_URL &&
+  !!SUPABASE_ANON_KEY &&
+  SUPABASE_URL !== 'https://placeholder.supabase.co' &&
+  SUPABASE_ANON_KEY !== 'placeholder-anon-key';
+
+if (!IS_SUPABASE_CONFIGURED) {
+  console.warn(
+    '⚠️ Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY in .env and rebuild.'
+  );
+}
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,

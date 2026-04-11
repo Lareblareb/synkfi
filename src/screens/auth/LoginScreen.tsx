@@ -89,7 +89,7 @@ export const LoginScreen: React.FC = () => {
 
         {error && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{t('login.loginFailed')}</Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 

@@ -15,6 +15,7 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { TouchableOpacity } from 'react-native';
+import { IS_SUPABASE_CONFIGURED } from '../../services/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MARQUEE_TEXT =
@@ -54,6 +55,14 @@ export const WelcomeScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {!IS_SUPABASE_CONFIGURED && (
+        <View style={styles.configWarning}>
+          <Text style={styles.configWarningText}>
+            ⚠️ Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY in .env
+          </Text>
+        </View>
+      )}
+
       {/* Hero Section */}
       <View style={styles.heroSection}>
         {/* Badge */}
@@ -74,7 +83,7 @@ export const WelcomeScreen: React.FC = () => {
           activeOpacity={0.8}
         >
           <Text style={styles.primaryButtonText}>
-            {t('welcome.exploreEvents')}
+            {t('welcome.signUp')}
           </Text>
         </TouchableOpacity>
 
@@ -84,7 +93,7 @@ export const WelcomeScreen: React.FC = () => {
           activeOpacity={0.8}
         >
           <Text style={styles.secondaryButtonText}>
-            {t('welcome.learnMore')}
+            {t('welcome.logIn')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -157,6 +166,22 @@ const styles = StyleSheet.create({
   menuLineShort: {
     width: 24,
     alignSelf: 'flex-end',
+  },
+  configWarning: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 24,
+    marginBottom: 8,
+  },
+  configWarningText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   heroSection: {
     flex: 1,

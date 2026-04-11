@@ -90,7 +90,7 @@ export const SignupScreen: React.FC = () => {
 
         {error && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{t('signup.signupFailed')}</Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 

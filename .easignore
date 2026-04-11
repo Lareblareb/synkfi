@@ -1,0 +1,43 @@
+# .easignore - files to exclude from EAS Build uploads
+# This file works like .gitignore but for EAS Build
+#
+# By default, EAS uses .gitignore to determine what to upload.
+# We want .env INCLUDED in the build (so secrets get bundled),
+# so we create this file to override .gitignore behavior.
+
+# Node
+node_modules/
+.expo/
+.metro-health-check*
+
+# Build
+ios/build/
+android/build/
+dist/
+web-build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# Tests
+coverage/
+__tests__/
+
+# Docs
+*.md
+docs/
+
+# NOTE: .env is NOT listed here, so it WILL be included in EAS builds.
+# Your secrets will be bundled into the APK via react-native-dotenv.
+# This is OK for development/testing but for production you should
+# use EAS Secrets instead (eas secret:create).
