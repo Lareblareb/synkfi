@@ -48,21 +48,23 @@ export const GroupChatScreen: React.FC = () => {
   const renderMessage = ({ item, index }: { item: ChatMessage; index: number }) => {
     const isOwn = item.sender_id === user?.id;
     const showAvatar = shouldShowAvatar(item, index);
+    const senderName = item.sender?.name ?? '';
+    const senderAvatar = item.sender?.avatar_url;
 
     return (
       <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
         {!isOwn && showAvatar && (
-          item.sender.avatar_url ? (
-            <Image source={{ uri: item.sender.avatar_url }} style={styles.msgAvatar} />
+          senderAvatar ? (
+            <Image source={{ uri: senderAvatar }} style={styles.msgAvatar} />
           ) : (
-            <View style={[styles.msgAvatarFallback, { backgroundColor: getAvatarColor(item.sender.name) }]}>
-              <Text style={styles.msgAvatarInitial}>{getInitial(item.sender.name)}</Text>
+            <View style={[styles.msgAvatarFallback, { backgroundColor: getAvatarColor(senderName) }]}>
+              <Text style={styles.msgAvatarInitial}>{getInitial(senderName || '?')}</Text>
             </View>
           )
         )}
         {!isOwn && !showAvatar && <View style={styles.avatarSpacer} />}
         <View style={styles.messageContent}>
-          {!isOwn && showAvatar && <Text style={styles.senderName}>{item.sender.name}</Text>}
+          {!isOwn && showAvatar && senderName && <Text style={styles.senderName}>{senderName}</Text>}
           <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
             <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>{item.message}</Text>
           </View>

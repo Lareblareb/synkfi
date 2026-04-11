@@ -21,9 +21,10 @@ export const MemberCard: React.FC<MemberCardProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const sports = member.sports ?? [];
   const primarySport =
-    member.sports.length > 0
-      ? SPORT_LABELS[member.sports[0]] ?? member.sports[0]
+    sports.length > 0
+      ? SPORT_LABELS[sports[0]] ?? sports[0]
       : '';
 
   const isConnected = member.connection_status === 'accepted';

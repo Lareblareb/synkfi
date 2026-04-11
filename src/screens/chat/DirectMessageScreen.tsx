@@ -48,14 +48,17 @@ export const DirectMessageScreen: React.FC = () => {
     const isOwn = item.sender_id === user?.id;
     const showAvatar = shouldShowAvatar(item, index);
 
+    const senderName = item.sender?.name ?? '';
+    const senderAvatar = item.sender?.avatar_url;
+
     return (
       <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
         {!isOwn && showAvatar && (
-          item.sender.avatar_url ? (
-            <Image source={{ uri: item.sender.avatar_url }} style={styles.msgAvatar} />
+          senderAvatar ? (
+            <Image source={{ uri: senderAvatar }} style={styles.msgAvatar} />
           ) : (
-            <View style={[styles.msgAvatarFallback, { backgroundColor: getAvatarColor(item.sender.name) }]}>
-              <Text style={styles.msgAvatarInitial}>{getInitial(item.sender.name)}</Text>
+            <View style={[styles.msgAvatarFallback, { backgroundColor: getAvatarColor(senderName) }]}>
+              <Text style={styles.msgAvatarInitial}>{getInitial(senderName || '?')}</Text>
             </View>
           )
         )}

@@ -77,6 +77,5 @@ const styles = StyleSheet.create({
   text: {
     ...typography.body,
     color: colors.text.primary,
-    whiteSpace: 'nowrap',
   },
 });

@@ -28,10 +28,10 @@ export const EventDetailScreen: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user?.id && route.params?.eventId) {
       fetchEventById(route.params.eventId, user.id);
     }
-  }, [route.params.eventId]);
+  }, [route.params?.eventId, user?.id]);
 
   useEffect(() => {
     if (!event) return;
@@ -167,28 +167,30 @@ export const EventDetailScreen: React.FC = () => {
         )}
 
         {/* Organizer */}
-        <View style={styles.organizerCard}>
-          <Text style={styles.sectionTitle}>{t('events:detail.organizer')}</Text>
-          <View style={styles.organizerRow}>
-            {event.creator.avatar_url ? (
-              <Image source={{ uri: event.creator.avatar_url }} style={styles.organizerAvatar} />
-            ) : (
-              <View style={[styles.organizerAvatarFallback, { backgroundColor: getAvatarColor(event.creator.name) }]}>
-                <Text style={styles.organizerInitial}>{getInitial(event.creator.name)}</Text>
-              </View>
-            )}
-            <Text style={styles.organizerName}>{event.creator.name}</Text>
-            {!event.is_creator && (
-              <TouchableOpacity
-                style={styles.messageBtn}
-                onPress={() => navigation.navigate('DirectMessage', { userId: event.creator.id, userName: event.creator.name })}
-              >
-                <Ionicons name="chatbubble-outline" size={16} color={colors.accent.lime} />
-                <Text style={styles.messageBtnText}>{t('events:detail.message')}</Text>
-              </TouchableOpacity>
-            )}
+        {event.creator && (
+          <View style={styles.organizerCard}>
+            <Text style={styles.sectionTitle}>{t('events:detail.organizer')}</Text>
+            <View style={styles.organizerRow}>
+              {event.creator.avatar_url ? (
+                <Image source={{ uri: event.creator.avatar_url }} style={styles.organizerAvatar} />
+              ) : (
+                <View style={[styles.organizerAvatarFallback, { backgroundColor: getAvatarColor(event.creator.name ?? '') }]}>
+                  <Text style={styles.organizerInitial}>{getInitial(event.creator.name ?? '?')}</Text>
+                </View>
+              )}
+              <Text style={styles.organizerName}>{event.creator.name ?? ''}</Text>
+              {!event.is_creator && event.creator.id && (
+                <TouchableOpacity
+                  style={styles.messageBtn}
+                  onPress={() => navigation.navigate('DirectMessage', { userId: event.creator!.id, userName: event.creator!.name ?? '' })}
+                >
+                  <Ionicons name="chatbubble-outline" size={16} color={colors.accent.lime} />
+                  <Text style={styles.messageBtnText}>{t('events:detail.message')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Participants */}
         <View style={styles.section}>
@@ -196,7 +198,7 @@ export const EventDetailScreen: React.FC = () => {
             {t('events:detail.participants')} ({event.current_participants}/{event.max_participants})
           </Text>
           <View style={styles.participantsGrid}>
-            {event.participants.map((p) => (
+            {(event.participants ?? []).map((p) => (
               <TouchableOpacity
                 key={p.user_id}
                 style={styles.participantItem}
@@ -205,11 +207,11 @@ export const EventDetailScreen: React.FC = () => {
                 {p.avatar_url ? (
                   <Image source={{ uri: p.avatar_url }} style={styles.participantAvatar} />
                 ) : (
-                  <View style={[styles.participantAvatarFallback, { backgroundColor: getAvatarColor(p.name) }]}>
-                    <Text style={styles.participantInitial}>{getInitial(p.name)}</Text>
+                  <View style={[styles.participantAvatarFallback, { backgroundColor: getAvatarColor(p.name ?? '') }]}>
+                    <Text style={styles.participantInitial}>{getInitial(p.name ?? '?')}</Text>
                   </View>
                 )}
-                <Text style={styles.participantName} numberOfLines={1}>{p.name}</Text>
+                <Text style={styles.participantName} numberOfLines={1}>{p.name ?? ''}</Text>
               </TouchableOpacity>
             ))}
           </View>

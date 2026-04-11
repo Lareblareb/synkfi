@@ -46,9 +46,11 @@ export const ConversationRow: React.FC<ConversationRowProps> = ({
           >
             {displayName}
           </Text>
-          <Text style={styles.time}>
-            {formatRelativeTime(conversation.last_message_at)}
-          </Text>
+          {conversation.last_message_at ? (
+            <Text style={styles.time}>
+              {formatRelativeTime(conversation.last_message_at)}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.bottomRow}>
@@ -59,7 +61,7 @@ export const ConversationRow: React.FC<ConversationRowProps> = ({
             ]}
             numberOfLines={1}
           >
-            {truncate(conversation.last_message, 50)}
+            {truncate(conversation.last_message ?? '', 50)}
           </Text>
 
           {hasUnread && (

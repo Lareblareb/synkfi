@@ -7,33 +7,63 @@ export const useAuth = () => {
   const store = useAuthStore();
 
   useEffect(() => {
-    const { data: subscription } = authService.onAuthStateChange(
-      async (event: string, session: unknown) => {
-        if (event === 'SIGNED_IN' && session) {
-          store.setSession(session);
-          await store.loadUserProfile();
-        } else if (event === 'SIGNED_OUT') {
-          store.setUser(null);
-          store.setSession(null);
-        }
-      }
-    );
+    let subscription: { unsubscribe: () => void } | null = null;
 
-    store.loadUserProfile();
+    try {
+      const result = authService.onAuthStateChange(
+        async (event: string, session: unknown) => {
+          try {
+            if (event === 'SIGNED_IN' && session) {
+              store.setSession(session);
+              await store.loadUserProfile();
+            } else if (event === 'SIGNED_OUT') {
+              store.setUser(null);
+              store.setSession(null);
+            }
+          } catch (err) {
+            console.warn('Auth state change error:', err);
+          }
+        }
+      );
+
+      // Supabase v2 returns { data: { subscription: { unsubscribe } } }
+      const sub = (result as { data?: { subscription?: { unsubscribe: () => void } } })
+        ?.data?.subscription;
+      if (sub) {
+        subscription = sub;
+      }
+    } catch (err) {
+      console.warn('Failed to setup auth listener:', err);
+    }
+
+    store.loadUserProfile().catch((err) => {
+      console.warn('Failed to load user profile:', err);
+    });
 
     return () => {
-      subscription?.subscription?.unsubscribe();
+      try {
+        subscription?.unsubscribe();
+      } catch {
+        // ignore
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (store.user?.id) {
-      notificationsService.registerForPushNotifications().then((token) => {
+    if (!store.user?.id) return;
+    notificationsService
+      .registerForPushNotifications()
+      .then((token) => {
         if (token && store.user) {
-          authService.updateFcmToken(store.user.id, token);
+          authService.updateFcmToken(store.user.id, token).catch((err) => {
+            console.warn('Failed to update FCM token:', err);
+          });
         }
+      })
+      .catch((err) => {
+        console.warn('Failed to register for push notifications:', err);
       });
-    }
   }, [store.user?.id]);
 
   return store;
