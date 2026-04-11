@@ -15,6 +15,11 @@ export interface PublicProfile {
   bio: string | null;
   location_name: string;
   sports: SportType[];
+  sport_skills?: Record<string, SkillLevel> | null;
+  interests?: string[] | null;
+  education?: string | null;
+  photos?: string[] | null;
+  age?: number | null;
   skill_level: SkillLevel;
   events_created_count: number;
   events_joined_count: number;

@@ -3,13 +3,12 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { MainTabParamList } from './types';
-import { DiscoveryScreen } from '../screens/discovery/DiscoveryScreen';
-import { MyEventsScreen } from '../screens/events/MyEventsScreen';
-import { CreateEventScreen } from '../screens/events/CreateEventScreen';
+import { HomeScreen } from '../screens/home/HomeScreen';
 import { ConnectScreen } from '../screens/connect/ConnectScreen';
+import { CreateEventScreen } from '../screens/events/CreateEventScreen';
+import { InboxScreen } from '../screens/chat/InboxScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { colors } from '../theme/colors';
-import { useTranslation } from 'react-i18next';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -27,8 +26,6 @@ const CreateTabButton: React.FC<CreateTabButtonProps> = ({ onPress }) => (
 );
 
 export const MainTabNavigator: React.FC = () => {
-  const { t } = useTranslation('common');
-
   return (
     <Tab.Navigator
       screenOptions={{
@@ -40,22 +37,22 @@ export const MainTabNavigator: React.FC = () => {
       }}
     >
       <Tab.Screen
-        name="Discovery"
-        component={DiscoveryScreen}
+        name="Home"
+        component={HomeScreen}
         options={{
-          tabBarLabel: t('nav.discovery'),
+          tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass-outline" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
       <Tab.Screen
-        name="Events"
-        component={MyEventsScreen}
+        name="Connect"
+        component={ConnectScreen}
         options={{
-          tabBarLabel: t('nav.events'),
+          tabBarLabel: 'Connect',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+            <Ionicons name="people-outline" size={size} color={color} />
           ),
         }}
       />
@@ -68,12 +65,12 @@ export const MainTabNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen
-        name="Connect"
-        component={ConnectScreen}
+        name="Messages"
+        component={InboxScreen}
         options={{
-          tabBarLabel: t('nav.connect'),
+          tabBarLabel: 'Messages',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+            <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),
         }}
       />
@@ -81,7 +78,7 @@ export const MainTabNavigator: React.FC = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: t('nav.profile'),
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-circle-outline" size={size} color={color} />
           ),

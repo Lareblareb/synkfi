@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image,
+  View, Text, StyleSheet, TouchableOpacity, Image, Animated,
+  PanResponder, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,173 +10,465 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../navigation/types';
 import { useConnections } from '../../hooks/useConnections';
 import { useAuthStore } from '../../store/auth';
-import { CONNECT_FILTERS } from '../../types/connection.types';
-import { SYNK_TEAM } from '../../types/user.types';
 import { PublicProfile } from '../../types/user.types';
+import { SPORT_EMOJI, SPORT_LABELS, SPORT_LIST } from '../../types/event.types';
+import { SportType } from '../../types/database.types';
 import { getInitial } from '../../utils/formatters';
 import { getAvatarColor } from '../../utils/constants';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
+const CARD_HEIGHT = SCREEN_HEIGHT * 0.62;
+
 export const ConnectScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { t } = useTranslation(['connect', 'common']);
   const user = useAuthStore((s) => s.user);
-  const { members, filter, setFilter, fetchMembers, sendConnectionRequest, isLoading, refresh } = useConnections();
+  const { members, sendConnectionRequest, isLoading, refresh } = useConnections();
 
-  const handleConnect = (memberId: string) => {
-    if (user) sendConnectionRequest(user.id, memberId);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [filterSports, setFilterSports] = useState<SportType[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const position = useRef(new Animated.ValueXY()).current;
+  const rotateAnim = position.x.interpolate({
+    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
+    outputRange: ['-15deg', '0deg', '15deg'],
+  });
+  const likeOpacity = position.x.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const nopeOpacity = position.x.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, 0],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [members.length]);
+
+  const filteredMembers = members.filter((m) => {
+    if (m.id === user?.id) return false;
+    if (filterSports.length === 0) return true;
+    return m.sports?.some((s) => filterSports.includes(s as SportType));
+  });
+
+  const currentMember = filteredMembers[currentIndex];
+  const nextMember = filteredMembers[currentIndex + 1];
+
+  const resetCard = () => {
+    Animated.spring(position, {
+      toValue: { x: 0, y: 0 },
+      friction: 5,
+      useNativeDriver: false,
+    }).start();
   };
 
-  const renderHeader = () => (
-    <View>
-      {/* Title */}
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>{t('connect:title')} </Text>
-        <Text style={styles.titleAccent}>{t('connect:titleAccent')}</Text>
+  const handleSwipeRight = () => {
+    if (!user || !currentMember) return;
+    sendConnectionRequest(user.id, currentMember.id);
+    Animated.timing(position, {
+      toValue: { x: SCREEN_WIDTH * 1.5, y: 0 },
+      duration: 250,
+      useNativeDriver: false,
+    }).start(() => {
+      position.setValue({ x: 0, y: 0 });
+      setCurrentIndex((prev) => prev + 1);
+    });
+  };
+
+  const handleSwipeLeft = () => {
+    Animated.timing(position, {
+      toValue: { x: -SCREEN_WIDTH * 1.5, y: 0 },
+      duration: 250,
+      useNativeDriver: false,
+    }).start(() => {
+      position.setValue({ x: 0, y: 0 });
+      setCurrentIndex((prev) => prev + 1);
+    });
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dx) > 10,
+      onPanResponderMove: (_, gesture) => {
+        position.setValue({ x: gesture.dx, y: gesture.dy });
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx > SWIPE_THRESHOLD) {
+          handleSwipeRight();
+        } else if (gesture.dx < -SWIPE_THRESHOLD) {
+          handleSwipeLeft();
+        } else {
+          resetCard();
+        }
+      },
+    })
+  ).current;
+
+  const toggleSportFilter = (sport: SportType) => {
+    setFilterSports((prev) =>
+      prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport]
+    );
+  };
+
+  if (isLoading && members.length === 0) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={colors.accent.lime} />
       </View>
-
-      {/* Filter Pills */}
-      <View style={styles.filterSection}>
-        {CONNECT_FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f.type}
-            style={[styles.filterPill, filter === f.type && styles.filterPillActive]}
-            onPress={() => { setFilter(filter === f.type ? null : f.type); fetchMembers(filter === f.type ? null : f.type); }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.filterEmoji}>{f.emoji}</Text>
-            <Text style={[styles.filterText, filter === f.type && styles.filterTextActive]}>
-              {t(`connect:filters.${f.type}`)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Team Members */}
-      <Text style={styles.sectionTitle}>{t('connect:featured')}</Text>
-      {SYNK_TEAM.map((member) => (
-        <View key={member.email} style={styles.memberCard}>
-          <View style={styles.memberHeader}>
-            <View style={[styles.memberAvatar, { backgroundColor: getAvatarColor(member.name) }]}>
-              <Text style={styles.memberInitial}>{member.initial}</Text>
-            </View>
-            <View>
-              <Text style={styles.memberName}>{member.name}</Text>
-              <Text style={styles.memberRole}>{member.role}</Text>
-            </View>
-          </View>
-          <View style={styles.contactRows}>
-            <View style={styles.contactRow}>
-              <Ionicons name="mail-outline" size={16} color={colors.accent.lime} />
-              <Text style={styles.contactText}>{member.email}</Text>
-            </View>
-            <View style={styles.contactRow}>
-              <Ionicons name="call-outline" size={16} color={colors.accent.lime} />
-              <Text style={styles.contactText}>{member.phone}</Text>
-            </View>
-          </View>
-        </View>
-      ))}
-
-      <Text style={styles.sectionTitle}>{t('connect:members')}</Text>
-    </View>
-  );
-
-  const renderMember = ({ item }: { item: PublicProfile }) => (
-    <TouchableOpacity
-      style={styles.memberCard}
-      onPress={() => navigation.navigate('PublicProfile', { userId: item.id })}
-      activeOpacity={0.8}
-    >
-      <View style={styles.memberHeader}>
-        {item.avatar_url ? (
-          <Image source={{ uri: item.avatar_url }} style={styles.memberAvatarImg} />
-        ) : (
-          <View style={[styles.memberAvatar, { backgroundColor: getAvatarColor(item.name ?? '') }]}>
-            <Text style={styles.memberInitial}>{getInitial(item.name ?? '?')}</Text>
-          </View>
-        )}
-        <View style={styles.memberInfo}>
-          <Text style={styles.memberName}>{item.name ?? ''}</Text>
-          <Text style={styles.memberRole}>{(item.sports && item.sports.length > 0) ? item.sports.join(', ') : (item.location_name ?? '')}</Text>
-        </View>
-        {item.connection_status === 'none' && item.id !== user?.id && (
-          <TouchableOpacity style={styles.connectBtn} onPress={() => handleConnect(item.id)}>
-            <Text style={styles.connectBtnText}>{t('connect:connect')}</Text>
-          </TouchableOpacity>
-        )}
-        {item.connection_status === 'pending_sent' && (
-          <View style={styles.pendingBadge}><Text style={styles.pendingText}>{t('connect:pending')}</Text></View>
-        )}
-        {item.connection_status === 'accepted' && (
-          <View style={styles.connectedBadge}><Text style={styles.connectedText}>{t('connect:connected')}</Text></View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+    );
+  }
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.logo}>SYNK</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
-          <Ionicons name="notifications-outline" size={22} color={colors.text.primary} />
+        <TouchableOpacity
+          style={styles.filterBtn}
+          onPress={() => setShowFilters(!showFilters)}
+        >
+          <Ionicons name="options-outline" size={22} color={colors.text.primary} />
+          {filterSports.length > 0 && (
+            <View style={styles.filterDot}>
+              <Text style={styles.filterDotText}>{filterSports.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={members}
-        renderItem={renderMember}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={!isLoading ? (
+      {/* Filter chips */}
+      {showFilters && (
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Filter by sport</Text>
+          <View style={styles.filterChips}>
+            {SPORT_LIST.map((sport) => (
+              <TouchableOpacity
+                key={sport}
+                style={[styles.chip, filterSports.includes(sport) && styles.chipActive]}
+                onPress={() => toggleSportFilter(sport)}
+              >
+                <Text style={styles.chipEmoji}>{SPORT_EMOJI[sport]}</Text>
+                <Text style={[styles.chipText, filterSports.includes(sport) && styles.chipTextActive]}>
+                  {SPORT_LABELS[sport]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Card Stack */}
+      <View style={styles.cardArea}>
+        {filteredMembers.length === 0 || currentIndex >= filteredMembers.length ? (
           <View style={styles.emptyState}>
             <Ionicons name="people-outline" size={64} color={colors.text.muted} />
-            <Text style={styles.emptyTitle}>{t('connect:noMembers')}</Text>
+            <Text style={styles.emptyTitle}>No more profiles</Text>
+            <Text style={styles.emptyHint}>
+              {filterSports.length > 0
+                ? 'Try adjusting your sport filters'
+                : 'Check back later for new members'}
+            </Text>
+            <TouchableOpacity style={styles.refreshBtn} onPress={refresh}>
+              <Ionicons name="refresh" size={18} color={colors.bg.primary} />
+              <Text style={styles.refreshText}>Refresh</Text>
+            </TouchableOpacity>
           </View>
-        ) : null}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={colors.accent.lime} />}
-      />
+        ) : (
+          <>
+            {/* Next card (behind) */}
+            {nextMember && (
+              <View style={[styles.card, styles.nextCard]}>
+                <MemberCardContent member={nextMember} />
+              </View>
+            )}
+
+            {/* Current card (swipeable) */}
+            <Animated.View
+              {...panResponder.panHandlers}
+              style={[
+                styles.card,
+                {
+                  transform: [
+                    { translateX: position.x },
+                    { translateY: position.y },
+                    { rotate: rotateAnim },
+                  ],
+                },
+              ]}
+            >
+              <MemberCardContent member={currentMember} />
+
+              {/* LIKE badge */}
+              <Animated.View style={[styles.likeBadge, { opacity: likeOpacity }]}>
+                <Text style={styles.likeText}>CONNECT</Text>
+              </Animated.View>
+
+              {/* NOPE badge */}
+              <Animated.View style={[styles.nopeBadge, { opacity: nopeOpacity }]}>
+                <Text style={styles.nopeText}>SKIP</Text>
+              </Animated.View>
+            </Animated.View>
+          </>
+        )}
+      </View>
+
+      {/* Action Buttons */}
+      {filteredMembers.length > 0 && currentIndex < filteredMembers.length && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.skipBtn]}
+            onPress={handleSwipeLeft}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={32} color={colors.danger} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.infoBtn]}
+            onPress={() =>
+              currentMember &&
+              navigation.navigate('PublicProfile', { userId: currentMember.id })
+            }
+            activeOpacity={0.7}
+          >
+            <Ionicons name="information-circle-outline" size={28} color={colors.text.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.connectBtn]}
+            onPress={handleSwipeRight}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="heart" size={32} color={colors.accent.lime} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const MemberCardContent: React.FC<{ member: PublicProfile }> = ({ member }) => {
+  return (
+    <View style={styles.cardContent}>
+      {member.avatar_url ? (
+        <Image source={{ uri: member.avatar_url }} style={styles.cardImage} />
+      ) : (
+        <View style={[styles.cardImagePlaceholder, { backgroundColor: getAvatarColor(member.name) }]}>
+          <Text style={styles.cardInitial}>{getInitial(member.name)}</Text>
+        </View>
+      )}
+
+      {/* Gradient overlay with info */}
+      <View style={styles.cardOverlay}>
+        <Text style={styles.cardName}>{member.name ?? 'Unknown'}</Text>
+        {member.location_name && (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={14} color={colors.text.primary} />
+            <Text style={styles.cardLocation}>{member.location_name}</Text>
+          </View>
+        )}
+        {member.bio && <Text style={styles.cardBio} numberOfLines={2}>{member.bio}</Text>}
+
+        {/* Sports */}
+        {member.sports && member.sports.length > 0 && (
+          <View style={styles.sportsRow}>
+            {member.sports.slice(0, 4).map((sport) => (
+              <View key={sport} style={styles.sportPill}>
+                <Text style={styles.sportPillEmoji}>
+                  {SPORT_EMOJI[sport as SportType] ?? '🤸'}
+                </Text>
+                <Text style={styles.sportPillText}>
+                  {SPORT_LABELS[sport as SportType] ?? sport}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing['4xl'], paddingBottom: spacing.base },
+  loadingContainer: { justifyContent: 'center', alignItems: 'center' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing['4xl'],
+    paddingBottom: spacing.base,
+  },
   logo: { fontSize: 24, fontWeight: '800', color: colors.text.primary, letterSpacing: 2 },
-  listContent: { paddingHorizontal: spacing.xl, paddingBottom: spacing['4xl'] },
-  titleRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.xl },
-  title: { ...typography.h1, color: colors.text.primary },
-  titleAccent: { ...typography.h1, color: colors.accent.lime },
-  filterSection: { gap: spacing.sm, marginBottom: spacing['2xl'] },
-  filterPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bg.surface, borderRadius: 9999, paddingHorizontal: spacing.base, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border.subtle },
-  filterPillActive: { borderColor: colors.accent.lime, backgroundColor: 'rgba(197,241,53,0.08)' },
-  filterEmoji: { fontSize: 18 },
-  filterText: { color: colors.text.primary, fontSize: 15 },
-  filterTextActive: { color: colors.accent.lime, fontWeight: '600' },
-  sectionTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.md, marginTop: spacing.xl },
-  memberCard: { backgroundColor: colors.bg.surface, borderRadius: borderRadius.card, padding: spacing.base, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border.subtle },
-  memberHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  memberAvatar: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center' },
-  memberAvatarImg: { width: 52, height: 52, borderRadius: 26 },
-  memberInitial: { color: colors.bg.primary, fontSize: 22, fontWeight: '700' },
-  memberInfo: { flex: 1 },
-  memberName: { color: colors.text.primary, fontSize: 17, fontWeight: '700' },
-  memberRole: { color: colors.text.secondary, fontSize: 13, marginTop: 2 },
-  contactRows: { marginTop: spacing.md, gap: spacing.sm },
-  contactRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bg.elevated, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  contactText: { color: colors.text.primary, fontSize: 14 },
-  connectBtn: { backgroundColor: colors.accent.lime, borderRadius: 9999, paddingHorizontal: spacing.base, paddingVertical: spacing.sm },
-  connectBtnText: { color: colors.bg.primary, fontSize: 13, fontWeight: '600' },
-  pendingBadge: { backgroundColor: colors.bg.elevated, borderRadius: 9999, paddingHorizontal: spacing.base, paddingVertical: spacing.sm },
-  pendingText: { color: colors.text.secondary, fontSize: 13, fontWeight: '500' },
-  connectedBadge: { backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 9999, paddingHorizontal: spacing.base, paddingVertical: spacing.sm },
-  connectedText: { color: colors.success, fontSize: 13, fontWeight: '600' },
-  emptyState: { justifyContent: 'center', alignItems: 'center', paddingTop: spacing['5xl'] },
-  emptyTitle: { ...typography.h3, color: colors.text.primary, marginTop: spacing.base },
+  filterBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  filterDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: colors.accent.lime,
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  filterDotText: { color: colors.bg.primary, fontSize: 9, fontWeight: '700' },
+  filterSection: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.base,
+    backgroundColor: colors.bg.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  filterTitle: {
+    color: colors.text.secondary,
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+  filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: 9999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  chipActive: { backgroundColor: 'rgba(197,241,53,0.15)', borderColor: colors.accent.lime },
+  chipEmoji: { fontSize: 12 },
+  chipText: { color: colors.text.secondary, fontSize: 12 },
+  chipTextActive: { color: colors.accent.lime, fontWeight: '600' },
+  cardArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  card: {
+    position: 'absolute',
+    width: SCREEN_WIDTH - spacing.xl * 2,
+    height: CARD_HEIGHT,
+    backgroundColor: colors.bg.surface,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  nextCard: {
+    top: 8,
+    transform: [{ scale: 0.95 }],
+    opacity: 0.5,
+  },
+  cardContent: { flex: 1 },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.bg.elevated,
+  },
+  cardImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardInitial: { color: colors.bg.primary, fontSize: 120, fontWeight: '800' },
+  cardOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.xl,
+    backgroundColor: 'rgba(10, 10, 10, 0.85)',
+  },
+  cardName: { ...typography.h1, color: colors.text.primary, marginBottom: spacing.xs },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  cardLocation: { color: colors.text.primary, fontSize: 14 },
+  cardBio: { color: colors.text.secondary, fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
+  sportsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  sportPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(197,241,53,0.15)',
+    borderRadius: 9999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.accent.lime,
+  },
+  sportPillEmoji: { fontSize: 12 },
+  sportPillText: { color: colors.accent.lime, fontSize: 11, fontWeight: '600' },
+  likeBadge: {
+    position: 'absolute',
+    top: 60,
+    right: 30,
+    borderWidth: 4,
+    borderColor: colors.accent.lime,
+    borderRadius: 12,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    transform: [{ rotate: '20deg' }],
+  },
+  likeText: { color: colors.accent.lime, fontSize: 28, fontWeight: '800' },
+  nopeBadge: {
+    position: 'absolute',
+    top: 60,
+    left: 30,
+    borderWidth: 4,
+    borderColor: colors.danger,
+    borderRadius: 12,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    transform: [{ rotate: '-20deg' }],
+  },
+  nopeText: { color: colors.danger, fontSize: 28, fontWeight: '800' },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.xl,
+    paddingVertical: spacing.xl,
+    paddingBottom: spacing['5xl'],
+  },
+  actionBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderWidth: 2,
+  },
+  skipBtn: { borderColor: colors.danger },
+  infoBtn: { borderColor: colors.border.default, width: 48, height: 48, borderRadius: 24 },
+  connectBtn: { borderColor: colors.accent.lime },
+  emptyState: { justifyContent: 'center', alignItems: 'center', paddingTop: spacing['2xl'] },
+  emptyTitle: { ...typography.h2, color: colors.text.primary, marginTop: spacing.base, textAlign: 'center' },
+  emptyHint: { color: colors.text.secondary, fontSize: 14, textAlign: 'center', marginTop: spacing.sm },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.accent.lime,
+    borderRadius: 9999,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    marginTop: spacing.xl,
+  },
+  refreshText: { color: colors.bg.primary, fontSize: 15, fontWeight: '700' },
 });
