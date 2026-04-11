@@ -5,6 +5,8 @@ import { notificationsService } from '../services/notifications';
 import { NotificationRow } from '../types/database.types';
 import { useNavigation } from '@react-navigation/native';
 
+type NavigateFn = (route: string, params?: Record<string, unknown>) => void;
+
 export const useNotifications = () => {
   const store = useNotificationsStore();
   const user = useAuthStore((s) => s.user);
@@ -12,54 +14,85 @@ export const useNotifications = () => {
 
   const refresh = useCallback(async () => {
     if (!user) return;
-    await store.fetchNotifications(user.id);
+    try {
+      await store.fetchNotifications(user.id);
+    } catch (err) {
+      console.warn('Failed to refresh notifications:', err);
+    }
   }, [user?.id]);
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     if (!user) return;
 
-    const channel = notificationsService.subscribeToNotifications(
-      user.id,
-      (payload) => {
-        store.addNotification(payload as unknown as NotificationRow);
-      }
-    );
+    let channel: { unsubscribe: () => void } | null = null;
+    try {
+      channel = notificationsService.subscribeToNotifications(
+        user.id,
+        (payload) => {
+          try {
+            store.addNotification(payload as unknown as NotificationRow);
+          } catch (err) {
+            console.warn('Failed to add notification:', err);
+          }
+        }
+      );
+    } catch (err) {
+      console.warn('Failed to subscribe to notifications:', err);
+    }
 
     return () => {
-      channel.unsubscribe();
+      try {
+        channel?.unsubscribe();
+      } catch {
+        // ignore
+      }
     };
   }, [user?.id]);
 
   useEffect(() => {
-    const subscription = notificationsService.addNotificationResponseListener(
-      (response) => {
-        const data = response.notification.request.content.data as Record<
-          string,
-          string
-        >;
-        if (data?.type === 'event' && data?.event_id) {
-          (navigation as Record<string, Function>).navigate('EventDetail', {
-            eventId: data.event_id,
-          });
-        } else if (data?.type === 'chat' && data?.event_id) {
-          (navigation as Record<string, Function>).navigate('GroupChat', {
-            eventId: data.event_id,
-          });
-        } else if (data?.type === 'dm' && data?.user_id) {
-          (navigation as Record<string, Function>).navigate('DirectMessage', {
-            userId: data.user_id,
-          });
-        } else if (data?.type === 'connection') {
-          (navigation as Record<string, Function>).navigate('Connect');
-        }
-      }
-    );
+    let subscription: { remove: () => void } | null = null;
+    try {
+      subscription = notificationsService.addNotificationResponseListener(
+        (response: unknown) => {
+          try {
+            const r = response as {
+              notification?: {
+                request?: { content?: { data?: Record<string, string> } };
+              };
+            };
+            const data = r?.notification?.request?.content?.data;
+            if (!data) return;
 
-    return () => subscription.remove();
+            const navigate = (navigation as unknown as { navigate: NavigateFn }).navigate;
+            if (data.type === 'event' && data.event_id) {
+              navigate('EventDetail', { eventId: data.event_id });
+            } else if (data.type === 'chat' && data.event_id) {
+              navigate('GroupChat', { eventId: data.event_id });
+            } else if (data.type === 'dm' && data.user_id) {
+              navigate('DirectMessage', { userId: data.user_id });
+            } else if (data.type === 'connection') {
+              navigate('Connect');
+            }
+          } catch (err) {
+            console.warn('Failed to handle notification response:', err);
+          }
+        }
+      );
+    } catch (err) {
+      console.warn('Failed to add notification listener:', err);
+    }
+
+    return () => {
+      try {
+        subscription?.remove();
+      } catch {
+        // ignore
+      }
+    };
   }, [navigation]);
 
   return { ...store, refresh };
