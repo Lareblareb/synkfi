@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Image, TextInput,
+  ActivityIndicator, Image, TextInput, Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../store/auth';
 import { storageService } from '../../services/storage';
+import { authService } from '../../services/auth';
 import { SportType, SkillLevel } from '../../types/database.types';
 import { SPORT_LIST, SPORT_EMOJI, SPORT_LABELS } from '../../types/event.types';
 import { colors } from '../../theme/colors';
@@ -15,37 +16,64 @@ import { spacing } from '../../theme/spacing';
 import { Ionicons } from '@expo/vector-icons';
 
 const SKILL_LEVELS: SkillLevel[] = ['beginner', 'intermediate', 'advanced', 'pro'];
+const SKILL_COLORS: Record<SkillLevel, string> = {
+  beginner: '#3B82F6',
+  intermediate: '#F59E0B',
+  advanced: '#EF4444',
+  pro: '#8B5CF6',
+};
 
 export const ProfileSetupScreen: React.FC = () => {
   const { t } = useTranslation('auth');
-  const { completeProfileSetup, user, isLoading } = useAuthStore();
-  const [name, setName] = useState(user?.name ?? '');
+  const { user, loadUserProfile } = useAuthStore();
+  const [name, setName] = useState((user?.name && user.name.trim()) || '');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [selectedSports, setSelectedSports] = useState<SportType[]>([]);
-  const [skillLevel, setSkillLevel] = useState<SkillLevel>('beginner');
+  const [sportSkills, setSportSkills] = useState<Record<string, SkillLevel>>({});
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant photo library access');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.7,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setAvatarUri(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]) {
+        setAvatarUri(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick image');
     }
   };
 
   const toggleSport = (sport: SportType) => {
-    setSelectedSports((prev) =>
-      prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport]
-    );
+    setSelectedSports((prev) => {
+      if (prev.includes(sport)) {
+        const { [sport]: _, ...rest } = sportSkills;
+        setSportSkills(rest);
+        return prev.filter((s) => s !== sport);
+      } else {
+        setSportSkills({ ...sportSkills, [sport]: 'beginner' });
+        return [...prev, sport];
+      }
+    });
+  };
+
+  const setSportSkillLevel = (sport: SportType, level: SkillLevel) => {
+    setSportSkills((prev) => ({ ...prev, [sport]: level }));
   };
 
   const handleComplete = async () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setError(t('profileSetup.nameRequired'));
       return;
     }
@@ -54,22 +82,40 @@ export const ProfileSetupScreen: React.FC = () => {
       return;
     }
     setError(null);
+    setIsLoading(true);
 
     try {
-      let uploadedUrl: string | null = null;
-      if (avatarUri && user) {
-        uploadedUrl = await storageService.uploadAvatar(user.id, avatarUri);
+      if (!user) {
+        setError('User not found, please sign in again');
+        setIsLoading(false);
+        return;
       }
 
-      await completeProfileSetup({
-        name: name.trim(),
-        avatar_uri: uploadedUrl,
+      let uploadedUrl: string | null = null;
+      if (avatarUri) {
+        try {
+          uploadedUrl = await storageService.uploadAvatar(user.id, avatarUri);
+        } catch (uploadErr) {
+          console.warn('Avatar upload failed:', uploadErr);
+        }
+      }
+
+      const primarySkillLevel = sportSkills[selectedSports[0]] ?? 'beginner';
+
+      await authService.updateProfile(user.id, {
+        name: trimmedName,
+        avatar_url: uploadedUrl ?? user.avatar_url,
         sports: selectedSports,
-        skill_level: skillLevel,
+        sport_skills: sportSkills,
+        skill_level: primarySkillLevel,
         location_name: 'Helsinki, Finland',
       });
-    } catch {
-      setError(t('profileSetup.nameRequired'));
+
+      await loadUserProfile();
+      setIsLoading(false);
+    } catch (err) {
+      setIsLoading(false);
+      setError((err as Error)?.message ?? t('profileSetup.nameRequired'));
     }
   };
 
@@ -84,7 +130,6 @@ export const ProfileSetupScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Avatar */}
       <TouchableOpacity style={styles.avatarSection} onPress={pickImage}>
         {avatarUri ? (
           <Image source={{ uri: avatarUri }} style={styles.avatar} />
@@ -98,7 +143,6 @@ export const ProfileSetupScreen: React.FC = () => {
         </Text>
       </TouchableOpacity>
 
-      {/* Name */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{t('profileSetup.displayName')}</Text>
         <TextInput
@@ -106,11 +150,14 @@ export const ProfileSetupScreen: React.FC = () => {
           placeholder={t('profileSetup.displayNamePlaceholder')}
           placeholderTextColor={colors.text.muted}
           value={name}
-          onChangeText={setName}
+          onChangeText={(v) => {
+            setName(v);
+            if (error && v.trim()) setError(null);
+          }}
+          maxLength={50}
         />
       </View>
 
-      {/* Sports */}
       <View style={styles.section}>
         <Text style={styles.label}>{t('profileSetup.selectSports')}</Text>
         <Text style={styles.hint}>{t('profileSetup.selectSportsHint')}</Text>
@@ -131,26 +178,50 @@ export const ProfileSetupScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Skill Level */}
-      <View style={styles.section}>
-        <Text style={styles.label}>{t('profileSetup.skillLevel')}</Text>
-        <View style={styles.skillRow}>
-          {SKILL_LEVELS.map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[styles.skillPill, skillLevel === level && styles.skillPillSelected]}
-              onPress={() => setSkillLevel(level)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.skillText, skillLevel === level && styles.skillTextSelected]}>
-                {t(`profileSetup.${level}`)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      {selectedSports.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.label}>Skill Level for Each Sport</Text>
+          <Text style={styles.hint}>Set your skill level per sport</Text>
+          <View style={styles.skillsList}>
+            {selectedSports.map((sport) => {
+              const level = sportSkills[sport] ?? 'beginner';
+              return (
+                <View key={sport} style={styles.sportSkillRow}>
+                  <View style={styles.sportSkillLabel}>
+                    <Text style={styles.sportSkillEmoji}>{SPORT_EMOJI[sport]}</Text>
+                    <Text style={styles.sportSkillName}>{SPORT_LABELS[sport]}</Text>
+                  </View>
+                  <View style={styles.skillPickerRow}>
+                    {SKILL_LEVELS.map((l) => (
+                      <TouchableOpacity
+                        key={l}
+                        style={[
+                          styles.skillPickerBtn,
+                          level === l && {
+                            backgroundColor: `${SKILL_COLORS[l]}30`,
+                            borderColor: SKILL_COLORS[l],
+                          },
+                        ]}
+                        onPress={() => setSportSkillLevel(sport, l)}
+                      >
+                        <Text
+                          style={[
+                            styles.skillPickerText,
+                            level === l && { color: SKILL_COLORS[l], fontWeight: '700' },
+                          ]}
+                        >
+                          {l.charAt(0).toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
-      </View>
+      )}
 
-      {/* Location */}
       <View style={styles.section}>
         <Text style={styles.label}>{t('profileSetup.location')}</Text>
         <View style={styles.locationRow}>
@@ -180,31 +251,103 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, paddingTop: spacing['4xl'], paddingBottom: spacing['4xl'] },
   title: { ...typography.h1, color: colors.text.primary, marginBottom: spacing.sm },
   subtitle: { ...typography.body, color: colors.text.secondary, marginBottom: spacing['2xl'] },
-  errorBanner: { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', borderRadius: 12, padding: spacing.md, marginBottom: spacing.base },
+  errorBanner: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.base,
+  },
   errorText: { color: colors.danger, fontSize: 14 },
   avatarSection: { alignItems: 'center', marginBottom: spacing['2xl'] },
   avatar: { width: 100, height: 100, borderRadius: 50 },
-  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.bg.surface, borderWidth: 2, borderColor: colors.border.default, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 2,
+    borderColor: colors.border.default,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   avatarText: { color: colors.accent.lime, fontSize: 14, fontWeight: '500', marginTop: spacing.sm },
   inputGroup: { marginBottom: spacing.xl },
   label: { ...typography.bodySmall, color: colors.text.secondary, fontWeight: '500', marginBottom: spacing.sm },
   hint: { color: colors.text.muted, fontSize: 13, marginBottom: spacing.md },
-  input: { backgroundColor: colors.bg.input, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, paddingHorizontal: spacing.base, paddingVertical: spacing.md, color: colors.text.primary, fontSize: 16 },
+  input: {
+    backgroundColor: colors.bg.input,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    color: colors.text.primary,
+    fontSize: 16,
+  },
   section: { marginBottom: spacing.xl },
   chipsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.bg.surface, borderRadius: 9999, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.border.default },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.bg.surface,
+    borderRadius: 9999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
   chipSelected: { backgroundColor: 'rgba(197,241,53,0.15)', borderColor: colors.accent.lime },
   chipEmoji: { fontSize: 16 },
   chipText: { color: colors.text.secondary, fontSize: 14 },
   chipTextSelected: { color: colors.accent.lime, fontWeight: '600' },
-  skillRow: { flexDirection: 'row', gap: spacing.sm },
-  skillPill: { flex: 1, backgroundColor: colors.bg.surface, borderRadius: 9999, paddingVertical: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: colors.border.default },
-  skillPillSelected: { backgroundColor: colors.accent.lime, borderColor: colors.accent.lime },
-  skillText: { color: colors.text.secondary, fontSize: 13, fontWeight: '500' },
-  skillTextSelected: { color: colors.bg.primary },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bg.surface, borderRadius: 12, padding: spacing.base, borderWidth: 1, borderColor: colors.border.default },
+  skillsList: { gap: spacing.sm },
+  sportSkillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.bg.surface,
+    borderRadius: 12,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  sportSkillLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  sportSkillEmoji: { fontSize: 20 },
+  sportSkillName: { color: colors.text.primary, fontSize: 14, fontWeight: '600' },
+  skillPickerRow: { flexDirection: 'row', gap: 4 },
+  skillPickerBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.bg.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  skillPickerText: { color: colors.text.muted, fontSize: 12, fontWeight: '600' },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.bg.surface,
+    borderRadius: 12,
+    padding: spacing.base,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
   locationText: { color: colors.text.primary, fontSize: 15 },
-  completeButton: { backgroundColor: colors.accent.lime, borderRadius: 9999, paddingVertical: spacing.base, alignItems: 'center', marginTop: spacing.xl },
+  completeButton: {
+    backgroundColor: colors.accent.lime,
+    borderRadius: 9999,
+    paddingVertical: spacing.base,
+    alignItems: 'center',
+    marginTop: spacing.xl,
+  },
   buttonDisabled: { opacity: 0.6 },
   completeButtonText: { ...typography.button, color: colors.bg.primary },
 });

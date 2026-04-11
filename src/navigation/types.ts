@@ -9,10 +9,10 @@ export type AuthStackParamList = {
 };
 
 export type MainTabParamList = {
-  Discovery: undefined;
-  Events: undefined;
-  Create: undefined;
+  Home: undefined;
   Connect: undefined;
+  Create: undefined;
+  Messages: undefined;
   Profile: undefined;
 };
 
@@ -30,6 +30,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Settings: undefined;
   About: undefined;
+  CreateEvent: undefined;
 };
 
 declare global {

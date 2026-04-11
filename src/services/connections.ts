@@ -5,12 +5,49 @@ import { PublicProfile } from '../types/user.types';
 
 export const connectionsService = {
   async sendConnectionRequest(requesterId: string, addresseeId: string): Promise<void> {
+    // Check if a connection already exists between these two users
+    const { data: existing } = await supabase
+      .from('connections')
+      .select('*')
+      .or(
+        `and(requester_id.eq.${requesterId},addressee_id.eq.${addresseeId}),and(requester_id.eq.${addresseeId},addressee_id.eq.${requesterId})`
+      )
+      .maybeSingle();
+
+    if (existing) {
+      // Already exists - don't create duplicate
+      return;
+    }
+
     const { error } = await supabase.from('connections').insert({
       requester_id: requesterId,
       addressee_id: addresseeId,
       status: 'pending',
     });
     if (error) throw error;
+
+    // Create notification for the addressee (fire and forget)
+    try {
+      const { data: requesterData } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', requesterId)
+        .single();
+
+      const requesterName = requesterData?.name ?? 'Someone';
+
+      await supabase.from('notifications').insert({
+        user_id: addresseeId,
+        type: 'connection_request',
+        title_en: 'New connection request',
+        title_fi: 'Uusi yhteyspyyntö',
+        body_en: `${requesterName} wants to connect with you`,
+        body_fi: `${requesterName} haluaa yhdistyä kanssasi`,
+        data: { user_id: requesterId, type: 'connection' },
+      });
+    } catch (err) {
+      console.warn('Failed to create notification:', err);
+    }
   },
 
   async respondToConnection(
@@ -85,7 +122,7 @@ export const connectionsService = {
   async getMembers(filter: ConnectFilter['type']): Promise<PublicProfile[]> {
     let query = supabase
       .from('users')
-      .select('id, name, avatar_url, bio, location_name, sports, skill_level')
+      .select('id, name, avatar_url, bio, location_name, sports, sport_skills, interests, education, photos, age, skill_level')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -109,7 +146,7 @@ export const connectionsService = {
   async getPublicProfile(userId: string, currentUserId: string): Promise<PublicProfile> {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, name, avatar_url, bio, location_name, sports, skill_level')
+      .select('id, name, avatar_url, bio, location_name, sports, sport_skills, interests, education, photos, age, skill_level')
       .eq('id', userId)
       .single();
 

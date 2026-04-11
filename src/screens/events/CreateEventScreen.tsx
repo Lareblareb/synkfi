@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, ActivityIndicator, Platform,
+  TextInput, ActivityIndicator, Platform, Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../../navigation/types';
 import { useEventsStore } from '../../store/events';
 import { useAuthStore } from '../../store/auth';
+import { geocodingService, GeocodedPlace } from '../../services/geocoding';
 import { SportType, SkillLevel, GenderPreference } from '../../types/database.types';
 import { SPORT_LIST, SPORT_EMOJI, SPORT_LABELS } from '../../types/event.types';
 import { calculateCostPerPerson } from '../../utils/costSplitter';
@@ -28,18 +29,28 @@ export const CreateEventScreen: React.FC = () => {
   const { createEvent, isLoading } = useEventsStore();
   const user = useAuthStore((s) => s.user);
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
 
   // Step 1
   const [sport, setSport] = useState<SportType | ''>('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [skillLevel, setSkillLevel] = useState<SkillLevel>('beginner');
+  const [skillLevels, setSkillLevels] = useState<SkillLevel[]>(['beginner', 'intermediate']);
   const [genderPref, setGenderPref] = useState<GenderPreference>('any');
 
   // Step 2
-  const [dateTime, setDateTime] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);
+  const [dateTime, setDateTime] = useState(() => {
+    const d = new Date();
+    d.setHours(d.getHours() + 2, 0, 0, 0);
+    return d;
+  });
+  const [datePickerMode, setDatePickerMode] = useState<'date' | 'time' | null>(null);
   const [locationName, setLocationName] = useState('');
+  const [locationLat, setLocationLat] = useState(60.1699);
+  const [locationLng, setLocationLng] = useState(24.9384);
+  const [placeSuggestions, setPlaceSuggestions] = useState<GeocodedPlace[]>([]);
+  const [searchingPlaces, setSearchingPlaces] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [maxParticipants, setMaxParticipants] = useState(10);
 
   // Step 3
@@ -47,17 +58,92 @@ export const CreateEventScreen: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
 
+  const toggleSkillLevel = (level: SkillLevel) => {
+    setSkillLevels((prev) =>
+      prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]
+    );
+  };
+
+  const openDatePicker = () => {
+    setDatePickerMode('date');
+  };
+
+  const onDateTimeChange = (event: { type?: string }, selectedDate?: Date) => {
+    // Android sends 'dismissed' or 'set', iOS just passes the date directly
+    if (Platform.OS === 'android') {
+      setDatePickerMode(null);
+      if (event?.type !== 'set' || !selectedDate) {
+        return;
+      }
+
+      if (datePickerMode === 'date') {
+        // Preserve existing time, update date
+        const newDate = new Date(dateTime);
+        newDate.setFullYear(selectedDate.getFullYear());
+        newDate.setMonth(selectedDate.getMonth());
+        newDate.setDate(selectedDate.getDate());
+        setDateTime(newDate);
+        // Now open time picker
+        setTimeout(() => setDatePickerMode('time'), 100);
+      } else if (datePickerMode === 'time') {
+        const newDate = new Date(dateTime);
+        newDate.setHours(selectedDate.getHours());
+        newDate.setMinutes(selectedDate.getMinutes());
+        setDateTime(newDate);
+      }
+    } else {
+      // iOS
+      if (selectedDate) {
+        setDateTime(selectedDate);
+      }
+    }
+  };
+
   const validateStep = (): boolean => {
     setError(null);
     if (step === 1) {
       if (!sport) { setError(t('events:create.sportRequired')); return false; }
       if (!title.trim()) { setError(t('events:create.titleRequired')); return false; }
+      if (skillLevels.length === 0) { setError('Please select at least one skill level'); return false; }
     }
     if (step === 2) {
       if (!locationName.trim()) { setError(t('events:create.locationRequired')); return false; }
       if (maxParticipants < 2) { setError(t('events:create.maxParticipantsMin')); return false; }
+      if (dateTime <= new Date()) {
+        setError('Event must be in the future');
+        return false;
+      }
     }
     return true;
+  };
+
+  const handleLocationChange = (text: string) => {
+    setLocationName(text);
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    if (text.length < 3) {
+      setPlaceSuggestions([]);
+      return;
+    }
+    setSearchingPlaces(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const results = await geocodingService.searchPlaces(text);
+        setPlaceSuggestions(results);
+      } catch {
+        setPlaceSuggestions([]);
+      } finally {
+        setSearchingPlaces(false);
+      }
+    }, 400);
+  };
+
+  const selectPlace = (place: GeocodedPlace) => {
+    setLocationName(place.shortName);
+    setLocationLat(place.latitude);
+    setLocationLng(place.longitude);
+    setPlaceSuggestions([]);
   };
 
   const handleNext = () => {
@@ -65,30 +151,58 @@ export const CreateEventScreen: React.FC = () => {
   };
 
   const handlePublish = async () => {
-    if (!user || !sport) return;
+    if (!user || !sport || submitting) return;
+    setSubmitting(true);
+    setError(null);
     try {
+      // Use the first skill level for the main event (DB expects single value)
+      const primarySkillLevel = skillLevels[0] ?? 'beginner';
       const eventId = await createEvent({
         sport: sport as SportType,
         title: title.trim(),
         description: description.trim(),
-        skill_level: skillLevel,
+        skill_level: primarySkillLevel,
         gender_preference: genderPref,
         date_time: dateTime.toISOString(),
         location_name: locationName.trim() || 'Helsinki',
-        latitude: 60.1699,
-        longitude: 24.9384,
+        latitude: locationLat,
+        longitude: locationLng,
         max_participants: maxParticipants,
         venue_cost: parseFloat(venueCost) || 0,
       }, user.id);
+      setSubmitting(false);
+      // Reset form
+      setStep(1);
+      setSport('');
+      setTitle('');
+      setDescription('');
+      setLocationName('');
+      setVenueCost('0');
       navigation.navigate('EventDetail', { eventId });
-    } catch {
-      setError(t('common:error'));
+    } catch (err) {
+      setSubmitting(false);
+      const msg = (err as Error)?.message ?? 'Failed to create event';
+      setError(msg);
+      Alert.alert('Error creating event', msg);
     }
   };
 
   const costPreview = parseFloat(venueCost) > 0
     ? formatCurrency(calculateCostPerPerson(parseFloat(venueCost), maxParticipants))
     : null;
+
+  const formatDate = (d: Date) => {
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
+
+  const formatTime = (d: Date) => {
+    const h = d.getHours().toString().padStart(2, '0');
+    const m = d.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
 
   return (
     <View style={styles.container}>
@@ -128,16 +242,39 @@ export const CreateEventScreen: React.FC = () => {
             </View>
 
             <Text style={styles.sectionTitle}>{t('events:create.eventTitle')}</Text>
-            <TextInput style={styles.input} placeholder={t('events:create.eventTitlePlaceholder')} placeholderTextColor={colors.text.muted} value={title} onChangeText={setTitle} />
+            <TextInput
+              style={styles.input}
+              placeholder={t('events:create.eventTitlePlaceholder')}
+              placeholderTextColor={colors.text.muted}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={100}
+            />
 
             <Text style={styles.sectionTitle}>{t('events:create.description')}</Text>
-            <TextInput style={[styles.input, styles.textArea]} placeholder={t('events:create.descriptionPlaceholder')} placeholderTextColor={colors.text.muted} value={description} onChangeText={setDescription} multiline numberOfLines={4} textAlignVertical="top" />
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder={t('events:create.descriptionPlaceholder')}
+              placeholderTextColor={colors.text.muted}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              maxLength={500}
+            />
 
-            <Text style={styles.sectionTitle}>{t('events:create.skillLevel')}</Text>
+            <Text style={styles.sectionTitle}>Skill Levels (select all that apply)</Text>
             <View style={styles.pillRow}>
               {SKILL_LEVELS.map((l) => (
-                <TouchableOpacity key={l} style={[styles.pill, skillLevel === l && styles.pillActive]} onPress={() => setSkillLevel(l)}>
-                  <Text style={[styles.pillText, skillLevel === l && styles.pillTextActive]}>{t(`discovery:skillOptions.${l}`)}</Text>
+                <TouchableOpacity
+                  key={l}
+                  style={[styles.pill, skillLevels.includes(l) && styles.pillActive]}
+                  onPress={() => toggleSkillLevel(l)}
+                >
+                  <Text style={[styles.pillText, skillLevels.includes(l) && styles.pillTextActive]}>
+                    {t(`discovery:skillOptions.${l}`)}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -146,7 +283,9 @@ export const CreateEventScreen: React.FC = () => {
             <View style={styles.pillRow}>
               {GENDERS.map((g) => (
                 <TouchableOpacity key={g} style={[styles.pill, genderPref === g && styles.pillActive]} onPress={() => setGenderPref(g)}>
-                  <Text style={[styles.pillText, genderPref === g && styles.pillTextActive]}>{t(`discovery:genderOptions.${g}`)}</Text>
+                  <Text style={[styles.pillText, genderPref === g && styles.pillTextActive]}>
+                    {t(`discovery:genderOptions.${g}`)}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -156,24 +295,99 @@ export const CreateEventScreen: React.FC = () => {
         {step === 2 && (
           <>
             <Text style={styles.sectionTitle}>{t('events:create.dateTime')}</Text>
-            <TouchableOpacity style={styles.dateButton} onPress={() => setShowPicker(true)}>
-              <Ionicons name="calendar-outline" size={20} color={colors.accent.lime} />
-              <Text style={styles.dateText}>{dateTime.toLocaleDateString('fi-FI')} {dateTime.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}</Text>
-            </TouchableOpacity>
-            {showPicker && (
-              <DateTimePicker value={dateTime} mode="datetime" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={(_, date) => { setShowPicker(Platform.OS === 'ios'); if (date) setDateTime(date); }} minimumDate={new Date()} themeVariant="dark" />
+
+            {Platform.OS === 'android' ? (
+              <View style={styles.dateTimeRow}>
+                <TouchableOpacity
+                  style={[styles.dateButton, { flex: 1 }]}
+                  onPress={() => setDatePickerMode('date')}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={colors.accent.lime} />
+                  <Text style={styles.dateText}>{formatDate(dateTime)}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dateButton, { flex: 1 }]}
+                  onPress={() => setDatePickerMode('time')}
+                >
+                  <Ionicons name="time-outline" size={20} color={colors.accent.lime} />
+                  <Text style={styles.dateText}>{formatTime(dateTime)}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.dateButton} onPress={openDatePicker}>
+                <Ionicons name="calendar-outline" size={20} color={colors.accent.lime} />
+                <Text style={styles.dateText}>{formatDate(dateTime)} {formatTime(dateTime)}</Text>
+              </TouchableOpacity>
+            )}
+
+            {datePickerMode && (
+              <DateTimePicker
+                value={dateTime}
+                mode={datePickerMode}
+                is24Hour
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onDateTimeChange}
+                minimumDate={new Date()}
+                themeVariant="dark"
+              />
             )}
 
             <Text style={styles.sectionTitle}>{t('events:create.location')}</Text>
-            <TextInput style={styles.input} placeholder={t('events:create.searchLocation')} placeholderTextColor={colors.text.muted} value={locationName} onChangeText={setLocationName} />
+            <View style={styles.locationSearchContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder={t('events:create.searchLocation')}
+                placeholderTextColor={colors.text.muted}
+                value={locationName}
+                onChangeText={handleLocationChange}
+                maxLength={200}
+              />
+              {searchingPlaces && (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.accent.lime}
+                  style={styles.searchingIndicator}
+                />
+              )}
+              {placeSuggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  {placeSuggestions.map((place, idx) => (
+                    <TouchableOpacity
+                      key={`${place.latitude}-${place.longitude}-${idx}`}
+                      style={[
+                        styles.suggestionItem,
+                        idx === placeSuggestions.length - 1 && styles.suggestionItemLast,
+                      ]}
+                      onPress={() => selectPlace(place)}
+                    >
+                      <Ionicons name="location-outline" size={16} color={colors.accent.lime} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.suggestionShort} numberOfLines={1}>
+                          {place.shortName}
+                        </Text>
+                        <Text style={styles.suggestionFull} numberOfLines={1}>
+                          {place.displayName}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
 
             <Text style={styles.sectionTitle}>{t('events:create.maxParticipants')}</Text>
             <View style={styles.stepperRow}>
-              <TouchableOpacity style={styles.stepperBtn} onPress={() => setMaxParticipants(Math.max(2, maxParticipants - 1))}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setMaxParticipants(Math.max(2, maxParticipants - 1))}
+              >
                 <Ionicons name="remove" size={20} color={colors.text.primary} />
               </TouchableOpacity>
               <Text style={styles.stepperValue}>{maxParticipants}</Text>
-              <TouchableOpacity style={styles.stepperBtn} onPress={() => setMaxParticipants(maxParticipants + 1)}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setMaxParticipants(Math.min(100, maxParticipants + 1))}
+              >
                 <Ionicons name="add" size={20} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
@@ -185,10 +399,19 @@ export const CreateEventScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>{t('events:create.venueCost')}</Text>
             <View style={styles.costInputRow}>
               <Text style={styles.currencySymbol}>€</Text>
-              <TextInput style={styles.costInput} placeholder={t('events:create.venueCostPlaceholder')} placeholderTextColor={colors.text.muted} value={venueCost} onChangeText={setVenueCost} keyboardType="decimal-pad" />
+              <TextInput
+                style={styles.costInput}
+                placeholder={t('events:create.venueCostPlaceholder')}
+                placeholderTextColor={colors.text.muted}
+                value={venueCost}
+                onChangeText={(v) => setVenueCost(v.replace(/[^0-9.]/g, ''))}
+                keyboardType="decimal-pad"
+              />
             </View>
             {costPreview ? (
-              <Text style={styles.costPreview}>{t('events:create.costPreview', { cost: costPreview })}</Text>
+              <Text style={styles.costPreview}>
+                {t('events:create.costPreview', { cost: costPreview })}
+              </Text>
             ) : (
               <Text style={styles.freeNote}>{t('events:create.noVenueCost')}</Text>
             )}
@@ -202,8 +425,17 @@ export const CreateEventScreen: React.FC = () => {
             <Text style={styles.nextButtonText}>{t('common:next')}</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[styles.publishButton, isLoading && styles.buttonDisabled]} onPress={handlePublish} disabled={isLoading} activeOpacity={0.8}>
-            {isLoading ? <ActivityIndicator color={colors.bg.primary} /> : <Text style={styles.publishButtonText}>{t('events:create.publish')}</Text>}
+          <TouchableOpacity
+            style={[styles.publishButton, (isLoading || submitting) && styles.buttonDisabled]}
+            onPress={handlePublish}
+            disabled={isLoading || submitting}
+            activeOpacity={0.8}
+          >
+            {(isLoading || submitting) ? (
+              <ActivityIndicator color={colors.bg.primary} />
+            ) : (
+              <Text style={styles.publishButtonText}>{t('events:create.publish')}</Text>
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -236,6 +468,33 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: colors.accent.lime, borderColor: colors.accent.lime },
   pillText: { color: colors.text.secondary, fontSize: 13, fontWeight: '500' },
   pillTextActive: { color: colors.bg.primary },
+  locationSearchContainer: { position: 'relative' },
+  searchingIndicator: {
+    position: 'absolute',
+    right: spacing.base,
+    top: spacing.md + 2,
+  },
+  suggestionsContainer: {
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.accent.lime,
+    borderRadius: 12,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  suggestionItemLast: { borderBottomWidth: 0 },
+  suggestionShort: { color: colors.text.primary, fontSize: 14, fontWeight: '600' },
+  suggestionFull: { color: colors.text.muted, fontSize: 11, marginTop: 2 },
+  dateTimeRow: { flexDirection: 'row', gap: spacing.sm },
   dateButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bg.input, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, paddingHorizontal: spacing.base, paddingVertical: spacing.md },
   dateText: { color: colors.text.primary, fontSize: 16 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, justifyContent: 'center' },

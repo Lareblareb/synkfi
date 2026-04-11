@@ -72,6 +72,11 @@ export interface UserRow {
   location: unknown;
   location_name: string;
   sports: SportType[];
+  sport_skills: Record<string, SkillLevel> | null;
+  interests: string[] | null;
+  education: string | null;
+  photos: string[] | null;
+  age: number | null;
   skill_level: SkillLevel;
   availability: Record<string, boolean> | null;
   fcm_token: string | null;
@@ -90,6 +95,11 @@ export interface UserInsert {
   location?: unknown;
   location_name?: string;
   sports?: SportType[];
+  sport_skills?: Record<string, SkillLevel> | null;
+  interests?: string[] | null;
+  education?: string | null;
+  photos?: string[] | null;
+  age?: number | null;
   skill_level?: SkillLevel;
   availability?: Record<string, boolean> | null;
   fcm_token?: string | null;
@@ -105,6 +115,11 @@ export interface UserUpdate {
   location?: unknown;
   location_name?: string;
   sports?: SportType[];
+  sport_skills?: Record<string, SkillLevel> | null;
+  interests?: string[] | null;
+  education?: string | null;
+  photos?: string[] | null;
+  age?: number | null;
   skill_level?: SkillLevel;
   availability?: Record<string, boolean> | null;
   fcm_token?: string | null;

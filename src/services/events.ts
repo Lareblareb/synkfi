@@ -163,19 +163,36 @@ export const eventsService = {
   },
 
   async createEvent(event: EventInsert): Promise<EventRow> {
+    // Remove location field to avoid PostGIS formatting issues
+    // The database has a default Helsinki location
+    const eventPayload: Record<string, unknown> = { ...event };
+    delete eventPayload.location;
+
     const { data, error } = await supabase
       .from('events')
-      .insert(event)
+      .insert(eventPayload)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Create event error:', error);
+      throw error;
+    }
 
-    await supabase.from('event_participants').insert({
-      event_id: data.id,
-      user_id: event.created_by,
-      payment_status: 'paid',
-    });
+    if (!data) {
+      throw new Error('Event was not created');
+    }
+
+    // Add creator as participant (fire and forget)
+    try {
+      await supabase.from('event_participants').insert({
+        event_id: data.id,
+        user_id: event.created_by,
+        payment_status: 'paid',
+      });
+    } catch (participantErr) {
+      console.warn('Failed to add creator as participant:', participantErr);
+    }
 
     return data;
   },
