@@ -15,8 +15,9 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   participants,
   max = 8,
 }) => {
-  const visible = participants.slice(0, max);
-  const overflow = participants.length - max;
+  const safeParticipants = participants ?? [];
+  const visible = safeParticipants.slice(0, max);
+  const overflow = safeParticipants.length - max;
 
   return (
     <View style={styles.grid}>
@@ -24,11 +25,11 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
         <View key={participant.id} style={styles.item}>
           <Avatar
             uri={participant.avatar_url}
-            name={participant.name}
+            name={participant.name ?? ''}
             size="lg"
           />
           <Text style={styles.name} numberOfLines={1}>
-            {participant.name.split(' ')[0]}
+            {(participant.name ?? '').split(' ')[0]}
           </Text>
         </View>
       ))}

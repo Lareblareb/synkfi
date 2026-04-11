@@ -68,7 +68,7 @@ export const PublicProfileScreen: React.FC = () => {
 
         <Text style={styles.sectionTitle}>{t('connect:publicProfile.sports')}</Text>
         <View style={styles.sportsRow}>
-          {profile.sports.map((sport) => (
+          {(profile.sports ?? []).map((sport) => (
             <View key={sport} style={styles.sportPill}>
               <Text style={styles.sportText}>{sport}</Text>
             </View>

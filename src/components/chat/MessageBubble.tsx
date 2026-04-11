@@ -30,8 +30,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       {!isOwn && showAvatar && (
         <View style={styles.avatarWrapper}>
           <Avatar
-            uri={message.sender.avatar_url}
-            name={message.sender.name}
+            uri={message.sender?.avatar_url}
+            name={message.sender?.name ?? ''}
             size="sm"
           />
         </View>
@@ -39,7 +39,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       {!isOwn && !showAvatar && <View style={styles.avatarSpacer} />}
 
       <View style={styles.content}>
-        {!isOwn && showName && (
+        {!isOwn && showName && message.sender?.name && (
           <Text style={styles.senderName}>{message.sender.name}</Text>
         )}
         <View

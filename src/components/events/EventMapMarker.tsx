@@ -17,7 +17,7 @@ export const EventMapMarker: React.FC<EventMapMarkerProps> = ({
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <View style={styles.container}>
-        <Text style={styles.emoji}>{SPORT_EMOJI[data.sport]}</Text>
+        <Text style={styles.emoji}>{SPORT_EMOJI[data.sport] ?? '🤸'}</Text>
         <View style={styles.countBadge}>
           <Text style={styles.countText}>
             {data.current_participants}

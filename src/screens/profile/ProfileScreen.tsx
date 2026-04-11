@@ -64,7 +64,7 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('sports')}</Text>
           <View style={styles.sportsRow}>
-            {user.sports.map((sport) => (
+            {(user.sports ?? []).map((sport) => (
               <View key={sport} style={styles.sportPill}>
                 <Text style={styles.sportText}>{sport}</Text>
               </View>

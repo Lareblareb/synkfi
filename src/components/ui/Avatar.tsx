@@ -44,16 +44,17 @@ const AVATAR_COLORS = [
 ];
 
 const getColorFromName = (name: string): string => {
+  const safeName = name || '?';
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < safeName.length; i++) {
+    hash = safeName.charCodeAt(i) + ((hash << 5) - hash);
   }
   const index = Math.abs(hash) % AVATAR_COLORS.length;
   return AVATAR_COLORS[index];
 };
 
 const getInitial = (name: string): string => {
-  return name.charAt(0).toUpperCase();
+  return (name || '?').charAt(0).toUpperCase();
 };
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -63,7 +64,8 @@ export const Avatar: React.FC<AvatarProps> = ({
 }) => {
   const dimension = SIZES[size];
   const fontSize = FONT_SIZES[size];
-  const bgColor = getColorFromName(name);
+  const safeName = name ?? '';
+  const bgColor = getColorFromName(safeName);
 
   if (uri) {
     return (
@@ -93,7 +95,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         },
       ]}
     >
-      <Text style={[styles.initial, { fontSize }]}>{getInitial(name)}</Text>
+      <Text style={[styles.initial, { fontSize }]}>{getInitial(safeName)}</Text>
     </View>
   );
 };

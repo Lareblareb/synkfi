@@ -93,13 +93,13 @@ export const ConnectScreen: React.FC = () => {
         {item.avatar_url ? (
           <Image source={{ uri: item.avatar_url }} style={styles.memberAvatarImg} />
         ) : (
-          <View style={[styles.memberAvatar, { backgroundColor: getAvatarColor(item.name) }]}>
-            <Text style={styles.memberInitial}>{getInitial(item.name)}</Text>
+          <View style={[styles.memberAvatar, { backgroundColor: getAvatarColor(item.name ?? '') }]}>
+            <Text style={styles.memberInitial}>{getInitial(item.name ?? '?')}</Text>
           </View>
         )}
         <View style={styles.memberInfo}>
-          <Text style={styles.memberName}>{item.name}</Text>
-          <Text style={styles.memberRole}>{item.sports?.join(', ') || item.location_name}</Text>
+          <Text style={styles.memberName}>{item.name ?? ''}</Text>
+          <Text style={styles.memberRole}>{(item.sports && item.sports.length > 0) ? item.sports.join(', ') : (item.location_name ?? '')}</Text>
         </View>
         {item.connection_status === 'none' && item.id !== user?.id && (
           <TouchableOpacity style={styles.connectBtn} onPress={() => handleConnect(item.id)}>

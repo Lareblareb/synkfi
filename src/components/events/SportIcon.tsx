@@ -45,7 +45,7 @@ export const SportIcon: React.FC<SportIconProps> = ({
         },
       ]}
     >
-      <Text style={{ fontSize: emojiSize }}>{SPORT_EMOJI[sport]}</Text>
+      <Text style={{ fontSize: emojiSize }}>{SPORT_EMOJI[sport] ?? '🤸'}</Text>
     </View>
   );
 };

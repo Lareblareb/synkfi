@@ -23,8 +23,10 @@ export const AVATAR_COLORS = [
   '#EF4444',
 ] as const;
 
-export const getAvatarColor = (name: string): string => {
-  const index = name.charCodeAt(0) % AVATAR_COLORS.length;
+export const getAvatarColor = (name: string | null | undefined): string => {
+  if (!name || name.length === 0) return AVATAR_COLORS[0];
+  const code = name.charCodeAt(0);
+  const index = isNaN(code) ? 0 : Math.abs(code) % AVATAR_COLORS.length;
   return AVATAR_COLORS[index];
 };
 

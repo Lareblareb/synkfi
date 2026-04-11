@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       user,
       isAuthenticated: !!user,
-      isProfileComplete: !!user && user.sports.length > 0,
+      isProfileComplete: !!user && Array.isArray(user.sports) && user.sports.length > 0,
     }),
 
   setSession: (session) => set({ session }),
@@ -59,7 +59,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           user: profile,
           session: data.session,
           isAuthenticated: true,
-          isProfileComplete: profile.sports.length > 0,
+          isProfileComplete: Array.isArray(profile.sports) && profile.sports.length > 0,
           isLoading: false,
         });
       }
@@ -119,13 +119,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const session = await authService.getSession();
       if (session?.user) {
-        const profile = await authService.getUserProfile(session.user.id);
-        set({
-          user: profile,
-          session,
-          isAuthenticated: true,
-          isProfileComplete: profile.sports.length > 0,
-        });
+        try {
+          const profile = await authService.getUserProfile(session.user.id);
+          set({
+            user: profile,
+            session,
+            isAuthenticated: true,
+            isProfileComplete: Array.isArray(profile.sports) && profile.sports.length > 0,
+          });
+        } catch {
+          set({ isAuthenticated: false, user: null });
+        }
+      } else {
+        set({ isAuthenticated: false, user: null });
       }
     } catch {
       set({ isAuthenticated: false, user: null });

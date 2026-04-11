@@ -37,7 +37,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
     >
       <View style={styles.header}>
         <Text style={styles.sportEmoji}>
-          {SPORT_EMOJI[event.sport]}
+          {SPORT_EMOJI[event.sport] ?? '🤸'}
         </Text>
         <View style={styles.headerText}>
           <Text style={styles.title} numberOfLines={1}>
