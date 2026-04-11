@@ -47,14 +47,7 @@ export const ProfileScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>SYNK</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconBtn}>
-            <Ionicons name="settings-outline" size={22} color={colors.text.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('About')} style={styles.iconBtn}>
-            <Ionicons name="information-circle-outline" size={22} color={colors.text.primary} />
-          </TouchableOpacity>
-        </View>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

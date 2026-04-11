@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import { useEvents, useMyEvents } from '../../hooks/useEvents';
 import { useNotificationsStore } from '../../store/notifications';
 import { EventWithCreator, SPORT_EMOJI } from '../../types/event.types';
 import { FilterModal } from '../discovery/FilterModal';
+import { EventMapView } from '../../components/map/EventMapView';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
@@ -18,8 +19,6 @@ import { formatDateTime, formatCurrency } from '../../utils/formatters';
 
 type TabKey = 'discover' | 'joined' | 'created';
 type ViewMode = 'list' | 'map';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -39,6 +38,7 @@ export const HomeScreen: React.FC = () => {
   }, [activeTab, discoveryEvents, joinedEvents, createdEvents]);
 
   const isLoading = activeTab === 'discover' ? isDiscoveryLoading : isMyEventsLoading;
+  const showControls = activeTab === 'discover';
 
   const handleRefresh = useCallback(() => {
     if (activeTab === 'discover') {
@@ -140,7 +140,10 @@ export const HomeScreen: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'joined' && styles.tabActive]}
-          onPress={() => setActiveTab('joined')}
+          onPress={() => {
+            setActiveTab('joined');
+            setViewMode('list');
+          }}
         >
           <Text style={[styles.tabText, activeTab === 'joined' && styles.tabTextActive]}>
             Joined
@@ -148,7 +151,10 @@ export const HomeScreen: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'created' && styles.tabActive]}
-          onPress={() => setActiveTab('created')}
+          onPress={() => {
+            setActiveTab('created');
+            setViewMode('list');
+          }}
         >
           <Text style={[styles.tabText, activeTab === 'created' && styles.tabTextActive]}>
             Created
@@ -156,37 +162,46 @@ export const HomeScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* View Toggle + Filters */}
-      <View style={styles.controls}>
-        <View style={styles.viewToggle}>
-          <TouchableOpacity
-            style={[styles.toggleButton, viewMode === 'list' && styles.toggleActive]}
-            onPress={() => setViewMode('list')}
-          >
-            <Ionicons name="list" size={14} color={viewMode === 'list' ? colors.bg.primary : colors.text.secondary} />
-            <Text style={[styles.toggleText, viewMode === 'list' && styles.toggleTextActive]}>
-              List
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleButton, viewMode === 'map' && styles.toggleActive]}
-            onPress={() => setViewMode('map')}
-          >
-            <Ionicons name="map" size={14} color={viewMode === 'map' ? colors.bg.primary : colors.text.secondary} />
-            <Text style={[styles.toggleText, viewMode === 'map' && styles.toggleTextActive]}>
-              Map
-            </Text>
+      {/* Controls - ONLY on Discover */}
+      {showControls && (
+        <View style={styles.controls}>
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              style={[styles.toggleButton, viewMode === 'list' && styles.toggleActive]}
+              onPress={() => setViewMode('list')}
+            >
+              <Ionicons name="list" size={14} color={viewMode === 'list' ? colors.bg.primary : colors.text.secondary} />
+              <Text style={[styles.toggleText, viewMode === 'list' && styles.toggleTextActive]}>
+                List
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleButton, viewMode === 'map' && styles.toggleActive]}
+              onPress={() => setViewMode('map')}
+            >
+              <Ionicons name="map" size={14} color={viewMode === 'map' ? colors.bg.primary : colors.text.secondary} />
+              <Text style={[styles.toggleText, viewMode === 'map' && styles.toggleTextActive]}>
+                Map
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(true)}>
+            <Ionicons name="options-outline" size={18} color={colors.text.primary} />
+            <Text style={styles.filterText}>Filters</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(true)}>
-          <Ionicons name="options-outline" size={18} color={colors.text.primary} />
-          <Text style={styles.filterText}>Filters</Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
       {/* Content */}
-      {viewMode === 'list' ? (
+      {showControls && viewMode === 'map' ? (
+        <View style={styles.mapWrap}>
+          <EventMapView
+            events={displayedEvents}
+            onEventPress={(id) => navigation.navigate('EventDetail', { eventId: id })}
+          />
+        </View>
+      ) : (
         <FlatList
           data={displayedEvents}
           renderItem={renderEventCard}
@@ -202,55 +217,9 @@ export const HomeScreen: React.FC = () => {
             />
           }
         />
-      ) : (
-        <MapPlaceholder events={displayedEvents} onEventPress={(id) => navigation.navigate('EventDetail', { eventId: id })} />
       )}
 
       <FilterModal visible={filterVisible} onClose={() => setFilterVisible(false)} />
-    </View>
-  );
-};
-
-// Visual map placeholder that shows event locations as a grid
-const MapPlaceholder: React.FC<{ events: EventWithCreator[]; onEventPress: (id: string) => void }> = ({
-  events,
-  onEventPress,
-}) => {
-  return (
-    <View style={styles.mapContainer}>
-      <View style={styles.mapHelsinki}>
-        <Ionicons name="location" size={48} color={colors.accent.lime} />
-        <Text style={styles.mapCityLabel}>Helsinki, Finland</Text>
-        <Text style={styles.mapCoords}>60.1699° N, 24.9384° E</Text>
-      </View>
-
-      {events.length > 0 && (
-        <View style={styles.mapPinsContainer}>
-          <Text style={styles.mapPinsTitle}>{events.length} events nearby</Text>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={events}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.mapPinsList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.mapPin}
-                onPress={() => onEventPress(item.id)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.mapPinEmoji}>{SPORT_EMOJI[item.sport] ?? '🤸'}</Text>
-                <Text style={styles.mapPinTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.mapPinLocation} numberOfLines={1}>{item.location_name}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
-
-      {events.length === 0 && (
-        <Text style={styles.mapEmpty}>No events to show on the map</Text>
-      )}
     </View>
   );
 };
@@ -355,17 +324,5 @@ const styles = StyleSheet.create({
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing['5xl'] },
   emptyTitle: { ...typography.h3, color: colors.text.primary, marginTop: spacing.base, textAlign: 'center' },
   emptyHint: { color: colors.text.secondary, fontSize: 14, textAlign: 'center', marginTop: spacing.sm, paddingHorizontal: spacing.xl },
-  // Map styles
-  mapContainer: { flex: 1, backgroundColor: colors.bg.surface, marginHorizontal: spacing.xl, marginBottom: spacing['4xl'] + 80, borderRadius: borderRadius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.border.subtle },
-  mapHelsinki: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg.elevated },
-  mapCityLabel: { ...typography.h2, color: colors.text.primary, marginTop: spacing.md },
-  mapCoords: { color: colors.text.muted, fontSize: 12, marginTop: spacing.xs },
-  mapPinsContainer: { padding: spacing.base, borderTopWidth: 1, borderTopColor: colors.border.subtle, backgroundColor: colors.bg.surface },
-  mapPinsTitle: { color: colors.accent.lime, fontSize: 13, fontWeight: '600', marginBottom: spacing.sm },
-  mapPinsList: { gap: spacing.sm, paddingRight: spacing.base },
-  mapPin: { width: 140, padding: spacing.sm, backgroundColor: colors.bg.elevated, borderRadius: 12, borderWidth: 1, borderColor: colors.accent.lime, marginRight: spacing.sm },
-  mapPinEmoji: { fontSize: 20, marginBottom: spacing.xs },
-  mapPinTitle: { color: colors.text.primary, fontSize: 13, fontWeight: '600' },
-  mapPinLocation: { color: colors.text.muted, fontSize: 11, marginTop: 2 },
-  mapEmpty: { position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: colors.text.muted, fontSize: 13 },
+  mapWrap: { flex: 1, marginBottom: 80 },
 });

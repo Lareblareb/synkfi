@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, ActivityIndicator, Platform, Alert,
@@ -11,6 +11,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../../navigation/types';
 import { useEventsStore } from '../../store/events';
 import { useAuthStore } from '../../store/auth';
+import { geocodingService, GeocodedPlace } from '../../services/geocoding';
 import { SportType, SkillLevel, GenderPreference } from '../../types/database.types';
 import { SPORT_LIST, SPORT_EMOJI, SPORT_LABELS } from '../../types/event.types';
 import { calculateCostPerPerson } from '../../utils/costSplitter';
@@ -45,6 +46,11 @@ export const CreateEventScreen: React.FC = () => {
   });
   const [datePickerMode, setDatePickerMode] = useState<'date' | 'time' | null>(null);
   const [locationName, setLocationName] = useState('');
+  const [locationLat, setLocationLat] = useState(60.1699);
+  const [locationLng, setLocationLng] = useState(24.9384);
+  const [placeSuggestions, setPlaceSuggestions] = useState<GeocodedPlace[]>([]);
+  const [searchingPlaces, setSearchingPlaces] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [maxParticipants, setMaxParticipants] = useState(10);
 
   // Step 3
@@ -111,6 +117,35 @@ export const CreateEventScreen: React.FC = () => {
     return true;
   };
 
+  const handleLocationChange = (text: string) => {
+    setLocationName(text);
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    if (text.length < 3) {
+      setPlaceSuggestions([]);
+      return;
+    }
+    setSearchingPlaces(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const results = await geocodingService.searchPlaces(text);
+        setPlaceSuggestions(results);
+      } catch {
+        setPlaceSuggestions([]);
+      } finally {
+        setSearchingPlaces(false);
+      }
+    }, 400);
+  };
+
+  const selectPlace = (place: GeocodedPlace) => {
+    setLocationName(place.shortName);
+    setLocationLat(place.latitude);
+    setLocationLng(place.longitude);
+    setPlaceSuggestions([]);
+  };
+
   const handleNext = () => {
     if (validateStep()) setStep(step + 1);
   };
@@ -130,8 +165,8 @@ export const CreateEventScreen: React.FC = () => {
         gender_preference: genderPref,
         date_time: dateTime.toISOString(),
         location_name: locationName.trim() || 'Helsinki',
-        latitude: 60.1699,
-        longitude: 24.9384,
+        latitude: locationLat,
+        longitude: locationLng,
         max_participants: maxParticipants,
         venue_cost: parseFloat(venueCost) || 0,
       }, user.id);
@@ -298,14 +333,47 @@ export const CreateEventScreen: React.FC = () => {
             )}
 
             <Text style={styles.sectionTitle}>{t('events:create.location')}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={t('events:create.searchLocation')}
-              placeholderTextColor={colors.text.muted}
-              value={locationName}
-              onChangeText={setLocationName}
-              maxLength={200}
-            />
+            <View style={styles.locationSearchContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder={t('events:create.searchLocation')}
+                placeholderTextColor={colors.text.muted}
+                value={locationName}
+                onChangeText={handleLocationChange}
+                maxLength={200}
+              />
+              {searchingPlaces && (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.accent.lime}
+                  style={styles.searchingIndicator}
+                />
+              )}
+              {placeSuggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  {placeSuggestions.map((place, idx) => (
+                    <TouchableOpacity
+                      key={`${place.latitude}-${place.longitude}-${idx}`}
+                      style={[
+                        styles.suggestionItem,
+                        idx === placeSuggestions.length - 1 && styles.suggestionItemLast,
+                      ]}
+                      onPress={() => selectPlace(place)}
+                    >
+                      <Ionicons name="location-outline" size={16} color={colors.accent.lime} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.suggestionShort} numberOfLines={1}>
+                          {place.shortName}
+                        </Text>
+                        <Text style={styles.suggestionFull} numberOfLines={1}>
+                          {place.displayName}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
 
             <Text style={styles.sectionTitle}>{t('events:create.maxParticipants')}</Text>
             <View style={styles.stepperRow}>
@@ -400,6 +468,32 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: colors.accent.lime, borderColor: colors.accent.lime },
   pillText: { color: colors.text.secondary, fontSize: 13, fontWeight: '500' },
   pillTextActive: { color: colors.bg.primary },
+  locationSearchContainer: { position: 'relative' },
+  searchingIndicator: {
+    position: 'absolute',
+    right: spacing.base,
+    top: spacing.md + 2,
+  },
+  suggestionsContainer: {
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.accent.lime,
+    borderRadius: 12,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  suggestionItemLast: { borderBottomWidth: 0 },
+  suggestionShort: { color: colors.text.primary, fontSize: 14, fontWeight: '600' },
+  suggestionFull: { color: colors.text.muted, fontSize: 11, marginTop: 2 },
   dateTimeRow: { flexDirection: 'row', gap: spacing.sm },
   dateButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bg.input, borderRadius: 12, borderWidth: 1, borderColor: colors.border.default, paddingHorizontal: spacing.base, paddingVertical: spacing.md },
   dateText: { color: colors.text.primary, fontSize: 16 },

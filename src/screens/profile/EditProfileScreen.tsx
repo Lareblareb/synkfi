@@ -48,10 +48,14 @@ export const EditProfileScreen: React.FC = () => {
 
   const pickAvatar = async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant photo library access in settings');
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
         quality: 0.7,
       });
       if (!result.canceled && result.assets[0]) {
@@ -64,10 +68,14 @@ export const EditProfileScreen: React.FC = () => {
 
   const addPhoto = async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant photo library access in settings');
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 5],
+        allowsEditing: false,
         quality: 0.7,
       });
       if (!result.canceled && result.assets[0]) {
@@ -125,8 +133,29 @@ export const EditProfileScreen: React.FC = () => {
       if (avatarUri) {
         try {
           avatarUrl = await storageService.uploadAvatar(user.id, avatarUri);
-        } catch {
-          // If upload fails, keep old avatar
+        } catch (uploadErr) {
+          console.error('Avatar upload failed:', uploadErr);
+          Alert.alert(
+            'Photo upload failed',
+            'Could not upload profile picture. Make sure the "synk-avatars" bucket exists in Supabase Storage. Saving other profile changes...'
+          );
+        }
+      }
+
+      // Upload any new local photos (local file URIs start with file:// or content://)
+      const uploadedPhotos: string[] = [];
+      for (const photo of photos) {
+        if (photo.startsWith('http')) {
+          // Already uploaded
+          uploadedPhotos.push(photo);
+        } else {
+          try {
+            const url = await storageService.uploadPhoto(user.id, photo);
+            uploadedPhotos.push(url);
+          } catch (uploadErr) {
+            console.warn('Photo upload failed for one photo:', uploadErr);
+            // Skip this one
+          }
         }
       }
 
@@ -139,15 +168,16 @@ export const EditProfileScreen: React.FC = () => {
         sports,
         sport_skills: sportSkills,
         interests,
-        photos,
+        photos: uploadedPhotos,
         avatar_url: avatarUrl,
       });
       await loadUserProfile();
+      setIsLoading(false);
       navigation.goBack();
     } catch (err) {
+      setIsLoading(false);
       Alert.alert('Error', (err as Error)?.message ?? 'Failed to save profile');
     }
-    setIsLoading(false);
   };
 
   const displayAvatar = avatarUri ?? user?.avatar_url;

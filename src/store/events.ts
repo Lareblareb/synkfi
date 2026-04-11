@@ -91,12 +91,17 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   createEvent: async (data, userId) => {
     set({ isLoading: true, error: null });
     try {
+      // Use GeoJSON format for PostGIS geography column
+      const locationGeoJson = {
+        type: 'Point',
+        coordinates: [data.longitude, data.latitude],
+      };
       const event = await eventsService.createEvent({
         title: data.title,
         sport: data.sport,
         description: data.description,
         date_time: data.date_time,
-        location: `POINT(${data.longitude} ${data.latitude})`,
+        location: locationGeoJson as unknown,
         location_name: data.location_name,
         max_participants: data.max_participants,
         venue_cost: data.venue_cost,
@@ -107,7 +112,8 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       set({ isLoading: false });
       return event.id;
     } catch (err) {
-      set({ isLoading: false, error: (err as Error).message });
+      const errorMsg = (err as Error)?.message ?? 'Failed to create event';
+      set({ isLoading: false, error: errorMsg });
       throw err;
     }
   },
