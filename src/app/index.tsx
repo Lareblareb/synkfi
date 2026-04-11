@@ -2,13 +2,42 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar, View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { STRIPE_PUBLISHABLE_KEY } from '@env';
+import * as SplashScreen from 'expo-splash-screen';
 import { initI18n } from '../i18n';
 import { RootNavigator } from '../navigation/RootNavigator';
 import { useAuth } from '../hooks/useAuth';
 import { colors } from '../theme/colors';
+
+let StripeProviderComponent: React.ComponentType<{
+  publishableKey: string;
+  merchantIdentifier?: string;
+  children: React.ReactNode;
+}> | null = null;
+
+try {
+  StripeProviderComponent =
+    require('@stripe/stripe-react-native').StripeProvider;
+} catch {
+  StripeProviderComponent = null;
+}
+
+let publishableKey = 'pk_test_placeholder';
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const env = require('@env');
+  publishableKey = env.STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder';
+} catch {
+  publishableKey = 'pk_test_placeholder';
+}
+
+try {
+  SplashScreen.preventAutoHideAsync().catch(() => {
+    // ignore - splash screen may already be hidden
+  });
+} catch {
+  // expo-splash-screen unavailable - ignore
+}
 
 const navigationTheme = {
   ...DarkTheme,
@@ -66,6 +95,21 @@ const AppContent: React.FC = () => {
   );
 };
 
+const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (StripeProviderComponent) {
+    const SP = StripeProviderComponent;
+    return (
+      <SP
+        publishableKey={publishableKey}
+        merchantIdentifier="merchant.com.synk.app"
+      >
+        {children}
+      </SP>
+    );
+  }
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
@@ -74,11 +118,16 @@ const App: React.FC = () => {
     const init = async () => {
       try {
         await initI18n();
-        setIsReady(true);
       } catch (err) {
         console.error('Init failed:', err);
         setInitError((err as Error)?.message ?? 'Failed to initialize');
+      } finally {
         setIsReady(true);
+        try {
+          await SplashScreen.hideAsync();
+        } catch {
+          // ignore
+        }
       }
     };
     init();
@@ -105,14 +154,11 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaProvider>
-          <StripeProvider
-            publishableKey={STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder'}
-            merchantIdentifier="merchant.com.synk.app"
-          >
+          <AppShell>
             <NavigationContainer theme={navigationTheme}>
               <AppContent />
             </NavigationContainer>
-          </StripeProvider>
+          </AppShell>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>

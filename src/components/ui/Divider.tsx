@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
+import { spacing as themeSpacing } from '../../theme/spacing';
 
 interface DividerProps {
   color?: string;
@@ -10,7 +10,7 @@ interface DividerProps {
 
 export const Divider: React.FC<DividerProps> = ({
   color = colors.border.subtle,
-  spacing: verticalSpacing = spacing.base,
+  spacing = themeSpacing.base,
 }) => {
   return (
     <View
@@ -18,7 +18,7 @@ export const Divider: React.FC<DividerProps> = ({
         styles.line,
         {
           backgroundColor: color,
-          marginVertical: verticalSpacing,
+          marginVertical: spacing,
         },
       ]}
     />

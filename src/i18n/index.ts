@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { getLocales } from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import enCommon from './locales/en/common.json';
@@ -55,44 +54,69 @@ const resources = {
 };
 
 const getDeviceLanguage = (): string => {
-  const locales = getLocales();
-  const deviceLang = locales[0]?.languageCode ?? 'en';
-  return deviceLang === 'fi' ? 'fi' : 'en';
+  try {
+    // expo-localization is loaded lazily so its absence doesn't crash bundling
+    const Localization = require('expo-localization');
+    const locales = Localization.getLocales?.();
+    if (Array.isArray(locales) && locales.length > 0) {
+      const deviceLang = locales[0]?.languageCode ?? 'en';
+      return deviceLang === 'fi' ? 'fi' : 'en';
+    }
+  } catch {
+    // ignore - fall back to en
+  }
+  return 'en';
 };
 
 export const initI18n = async (): Promise<void> => {
-  const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
-  const language = savedLanguage ?? getDeviceLanguage();
+  let language = 'en';
+  try {
+    const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
+    language = savedLanguage ?? getDeviceLanguage();
+  } catch {
+    language = getDeviceLanguage();
+  }
 
-  await i18n.use(initReactI18next).init({
-    resources,
-    lng: language,
-    fallbackLng: 'en',
-    ns: [
-      'common',
-      'auth',
-      'discovery',
-      'events',
-      'chat',
-      'profile',
-      'payments',
-      'notifications',
-      'connect',
-      'about',
-    ],
-    defaultNS: 'common',
-    interpolation: {
-      escapeValue: false,
-    },
-    react: {
-      useSuspense: false,
-    },
-  });
+  try {
+    await i18n.use(initReactI18next).init({
+      compatibilityJSON: 'v4',
+      resources,
+      lng: language,
+      fallbackLng: 'en',
+      ns: [
+        'common',
+        'auth',
+        'discovery',
+        'events',
+        'chat',
+        'profile',
+        'payments',
+        'notifications',
+        'connect',
+        'about',
+      ],
+      defaultNS: 'common',
+      interpolation: {
+        escapeValue: false,
+      },
+      react: {
+        useSuspense: false,
+      },
+      returnNull: false,
+      returnEmptyString: false,
+    });
+  } catch (err) {
+    console.warn('i18n init failed:', err);
+  }
 };
 
 export const changeLanguage = async (lang: 'en' | 'fi'): Promise<void> => {
-  await AsyncStorage.setItem(LANGUAGE_KEY, lang);
-  await i18n.changeLanguage(lang);
+  try {
+    await AsyncStorage.setItem(LANGUAGE_KEY, lang);
+    await i18n.changeLanguage(lang);
+  } catch (err) {
+    console.warn('Failed to change language:', err);
+  }
 };
 
 export const getCurrentLanguage = (): string => {
