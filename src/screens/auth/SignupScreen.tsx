@@ -17,6 +17,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/auth';
+import { authService } from '../../services/auth';
 import { signupSchema, SignupFormData } from '../../utils/validators';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -45,6 +46,26 @@ export const SignupScreen: React.FC = () => {
       navigation.navigate('ProfileSetup');
     } catch {
       // Error handled by store
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    clearError();
+    try {
+      await authService.signInWithGoogle();
+      await useAuthStore.getState().loadUserProfile();
+    } catch (err) {
+      console.warn('Google signup failed:', err);
+    }
+  };
+
+  const handleAppleSignup = async () => {
+    clearError();
+    try {
+      await authService.signInWithApple();
+      await useAuthStore.getState().loadUserProfile();
+    } catch (err) {
+      console.warn('Apple signup failed:', err);
     }
   };
 
@@ -191,7 +212,11 @@ export const SignupScreen: React.FC = () => {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.socialButton}
+            activeOpacity={0.8}
+            onPress={handleGoogleSignup}
+          >
             <Ionicons
               name="logo-google"
               size={20}
@@ -201,7 +226,11 @@ export const SignupScreen: React.FC = () => {
           </TouchableOpacity>
 
           {Platform.OS === 'ios' && (
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.socialButton}
+              activeOpacity={0.8}
+              onPress={handleAppleSignup}
+            >
               <Ionicons
                 name="logo-apple"
                 size={20}
