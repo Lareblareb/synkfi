@@ -1,30 +1,61 @@
+import { Linking, Platform } from 'react-native';
 import { supabase } from './supabase';
 import { UserInsert, UserUpdate, SportType, SkillLevel } from '../types/database.types';
 import { ProfileSetupData } from '../types/user.types';
 
+let WebBrowser: typeof import('expo-web-browser') | null = null;
+try {
+  WebBrowser = require('expo-web-browser');
+} catch {
+  WebBrowser = null;
+}
+
+const REDIRECT_URL = 'synk://auth/callback';
+
+const ensureUserProfile = async (
+  userId: string,
+  email: string,
+  name: string
+): Promise<void> => {
+  try {
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (existing) return;
+
+    const userInsert: UserInsert = {
+      id: userId,
+      name: name || email.split('@')[0] || 'User',
+      email,
+      sports: [],
+      skill_level: 'beginner',
+      location_name: 'Helsinki, Finland',
+      preferred_language: 'en',
+    };
+
+    await supabase.from('users').insert(userInsert);
+  } catch (err) {
+    console.warn('Failed to ensure user profile:', err);
+  }
+};
+
 export const authService = {
   async signUp(email: string, password: string, name: string) {
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
       options: {
         data: { name },
+        emailRedirectTo: REDIRECT_URL,
       },
     });
     if (error) throw error;
 
     if (data.user) {
-      const userInsert: UserInsert = {
-        id: data.user.id,
-        name,
-        email,
-        sports: [],
-        skill_level: 'beginner',
-        location_name: 'Helsinki, Finland',
-        preferred_language: 'en',
-      };
-      const { error: profileError } = await supabase.from('users').insert(userInsert);
-      if (profileError) throw profileError;
+      await ensureUserProfile(data.user.id, data.user.email ?? email, name);
     }
 
     return data;
@@ -32,27 +63,138 @@ export const authService = {
 
   async signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
     });
     if (error) throw error;
+
+    if (data.user) {
+      const userName =
+        (data.user.user_metadata?.name as string | undefined) ??
+        data.user.email?.split('@')[0] ??
+        'User';
+      await ensureUserProfile(data.user.id, data.user.email ?? email, userName);
+    }
+
     return data;
   },
 
   async signInWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-    });
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: REDIRECT_URL,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url && WebBrowser) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          REDIRECT_URL
+        );
+
+        if (result.type === 'success' && result.url) {
+          const params = new URL(result.url).hash.substring(1);
+          const urlParams = new URLSearchParams(params);
+          const accessToken = urlParams.get('access_token');
+          const refreshToken = urlParams.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            const { data: sessionData, error: sessionError } =
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+            if (sessionError) throw sessionError;
+
+            if (sessionData.user) {
+              const userName =
+                (sessionData.user.user_metadata?.name as string | undefined) ??
+                (sessionData.user.user_metadata?.full_name as string | undefined) ??
+                sessionData.user.email?.split('@')[0] ??
+                'User';
+              await ensureUserProfile(
+                sessionData.user.id,
+                sessionData.user.email ?? '',
+                userName
+              );
+            }
+
+            return sessionData;
+          }
+        }
+      } else if (data?.url) {
+        await Linking.openURL(data.url);
+      }
+
+      return data;
+    } catch (err) {
+      console.warn('Google sign-in failed:', err);
+      throw err;
+    }
   },
 
   async signInWithApple() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-    });
-    if (error) throw error;
-    return data;
+    if (Platform.OS !== 'ios') {
+      throw new Error('Apple Sign-In is only available on iOS');
+    }
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: REDIRECT_URL,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url && WebBrowser) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          REDIRECT_URL
+        );
+
+        if (result.type === 'success' && result.url) {
+          const params = new URL(result.url).hash.substring(1);
+          const urlParams = new URLSearchParams(params);
+          const accessToken = urlParams.get('access_token');
+          const refreshToken = urlParams.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            const { data: sessionData, error: sessionError } =
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+            if (sessionError) throw sessionError;
+
+            if (sessionData.user) {
+              const userName =
+                (sessionData.user.user_metadata?.full_name as string | undefined) ??
+                sessionData.user.email?.split('@')[0] ??
+                'User';
+              await ensureUserProfile(
+                sessionData.user.id,
+                sessionData.user.email ?? '',
+                userName
+              );
+            }
+
+            return sessionData;
+          }
+        }
+      }
+
+      return data;
+    } catch (err) {
+      console.warn('Apple sign-in failed:', err);
+      throw err;
+    }
   },
 
   async signOut() {
@@ -61,7 +203,10 @@ export const authService = {
   },
 
   async resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      { redirectTo: REDIRECT_URL }
+    );
     if (error) throw error;
   },
 

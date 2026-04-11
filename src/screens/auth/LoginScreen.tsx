@@ -16,6 +16,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/auth';
+import { authService } from '../../services/auth';
 import { loginSchema, LoginFormData } from '../../utils/validators';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -47,6 +48,26 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    clearError();
+    try {
+      await authService.signInWithGoogle();
+      await useAuthStore.getState().loadUserProfile();
+    } catch (err) {
+      console.warn('Google login failed:', err);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    clearError();
+    try {
+      await authService.signInWithApple();
+      await useAuthStore.getState().loadUserProfile();
+    } catch (err) {
+      console.warn('Apple login failed:', err);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -68,7 +89,7 @@ export const LoginScreen: React.FC = () => {
 
         {error && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{t('login.loginFailed')}</Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
@@ -148,7 +169,11 @@ export const LoginScreen: React.FC = () => {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.socialButton}
+            activeOpacity={0.8}
+            onPress={handleGoogleLogin}
+          >
             <Ionicons
               name="logo-google"
               size={20}
@@ -158,7 +183,11 @@ export const LoginScreen: React.FC = () => {
           </TouchableOpacity>
 
           {Platform.OS === 'ios' && (
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.socialButton}
+              activeOpacity={0.8}
+              onPress={handleAppleLogin}
+            >
               <Ionicons
                 name="logo-apple"
                 size={20}
