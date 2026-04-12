@@ -144,8 +144,8 @@ export const ConnectScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header - must be above cards */}
+      <View style={[styles.header, { zIndex: 10, elevation: 10 }]}>
         <Text style={styles.logo}>SYNK</Text>
         <TouchableOpacity
           style={styles.filterBtn}
@@ -296,13 +296,25 @@ export const ConnectScreen: React.FC = () => {
 };
 
 const MemberCardContent: React.FC<{ member: PublicProfile }> = ({ member }) => {
+  // Use the first gallery photo, then avatar, then fallback
+  const photos = member.photos ?? [];
+  const mainPhoto = photos[0] ?? member.avatar_url;
+
   return (
     <View style={cardStyles.cardContent}>
-      {member.avatar_url ? (
-        <Image source={{ uri: member.avatar_url }} style={cardStyles.cardImage} />
+      {mainPhoto ? (
+        <Image source={{ uri: mainPhoto }} style={cardStyles.cardImage} />
       ) : (
         <View style={[cardStyles.cardImagePlaceholder, { backgroundColor: getAvatarColor(member.name) }]}>
           <Text style={cardStyles.cardInitial}>{getInitial(member.name)}</Text>
+        </View>
+      )}
+
+      {/* Photo count indicator */}
+      {photos.length > 1 && (
+        <View style={cardStyles.photoCount}>
+          <Ionicons name="images" size={12} color={colors.text.primary} />
+          <Text style={cardStyles.photoCountText}>{photos.length}</Text>
         </View>
       )}
 
@@ -337,7 +349,20 @@ const MemberCardContent: React.FC<{ member: PublicProfile }> = ({ member }) => {
 
 const cardStyles = StyleSheet.create({
   cardContent: { flex: 1 },
-  cardImage: { width: '100%', height: '100%', backgroundColor: colors.bg.elevated },
+  cardImage: { width: '100%', height: '100%', backgroundColor: colors.bg.elevated, resizeMode: 'cover' },
+  photoCount: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(10,10,10,0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  photoCountText: { color: colors.text.primary, fontSize: 12, fontWeight: '600' },
   cardImagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   cardInitial: { color: colors.bg.primary, fontSize: 120, fontWeight: '800' },
   cardOverlay: {
