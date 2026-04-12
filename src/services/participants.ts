@@ -10,6 +10,7 @@ export const participantsService = {
       .single();
 
     if (eventError) throw eventError;
+    if (!event) throw new Error('Event not found');
     if (event.current_participants >= event.max_participants) {
       throw new Error('Event is full');
     }

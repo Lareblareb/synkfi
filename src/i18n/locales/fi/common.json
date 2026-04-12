@@ -38,6 +38,12 @@
   "studentRun": "Opiskelijavetoinen",
   "experienceNeeded": "Kokemusta tarvitaan",
   "connections": "Yhteydet",
+  "skill": {
+    "beginner": "Aloittelija",
+    "intermediate": "Keskitaso",
+    "advanced": "Edistynyt",
+    "pro": "Ammattilainen"
+  },
   "nav": {
     "discovery": "Löydä",
     "events": "Tapahtumat",

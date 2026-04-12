@@ -14,6 +14,8 @@
   "connect": "Yhdisty",
   "connected": "Yhdistetty",
   "pending": "Odottaa",
+  "accept": "Hyväksy",
+  "decline": "Hylkää",
   "message": "Viesti",
   "viewProfile": "Näytä profiili",
   "connectionSent": "Yhteyspyyntö lähetetty!",

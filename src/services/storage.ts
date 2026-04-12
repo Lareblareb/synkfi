@@ -29,6 +29,7 @@ export const storageService = {
       }
 
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+      if (!data?.publicUrl) throw new Error('Failed to generate public URL');
       return data.publicUrl;
     } catch (err) {
       console.error('Avatar upload failed:', err);
@@ -56,6 +57,7 @@ export const storageService = {
       }
 
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+      if (!data?.publicUrl) throw new Error('Failed to generate public URL');
       return data.publicUrl;
     } catch (err) {
       console.error('Photo upload failed:', err);

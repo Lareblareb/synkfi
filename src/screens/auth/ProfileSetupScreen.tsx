@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg.surface,
     borderWidth: 2,
     borderColor: colors.border.default,
-    borderStyle: 'dashed',
+    /* borderStyle: 'dashed' not supported in RN */
     justifyContent: 'center',
     alignItems: 'center',
   },

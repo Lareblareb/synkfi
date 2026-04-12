@@ -48,11 +48,11 @@ export const WelcomeScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.logo}>SYNK</Text>
-        <TouchableOpacity style={styles.menuButton}>
+        <View style={styles.menuButton}>
           <View style={styles.menuLine} />
           <View style={[styles.menuLine, styles.menuLineShort]} />
           <View style={styles.menuLine} />
-        </TouchableOpacity>
+        </View>
       </View>
 
       {!IS_SUPABASE_CONFIGURED && (

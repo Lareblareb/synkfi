@@ -58,13 +58,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sendGroupMessage: async (eventId, senderId, message) => {
     try {
-      await chatService.sendMessage({
+      const sentMessage = await chatService.sendMessage({
         event_id: eventId,
         sender_id: senderId,
         message,
         is_direct: false,
         read_by: [senderId],
       });
+      // Add message to UI immediately instead of waiting for realtime
+      if (sentMessage) {
+        set((state) => ({
+          currentMessages: [...state.currentMessages, sentMessage],
+        }));
+      }
     } catch (err) {
       set({ error: (err as Error).message });
     }
@@ -72,13 +78,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sendDirectMessage: async (senderId, receiverId, message) => {
     try {
-      await chatService.sendMessage({
+      const sentMessage = await chatService.sendMessage({
         sender_id: senderId,
         receiver_id: receiverId,
         message,
         is_direct: true,
         read_by: [senderId],
       });
+      // Add message to UI immediately
+      if (sentMessage) {
+        set((state) => ({
+          currentMessages: [...state.currentMessages, sentMessage],
+        }));
+      }
     } catch (err) {
       set({ error: (err as Error).message });
     }

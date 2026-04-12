@@ -213,7 +213,7 @@ export const EditProfileScreen: React.FC = () => {
 
         {/* Name */}
         <Text style={styles.label}>Name</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} placeholderTextColor={colors.text.muted} maxLength={50} />
+        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Enter your name" placeholderTextColor={colors.text.muted} maxLength={50} />
 
         {/* Age */}
         <Text style={styles.label}>Age</Text>

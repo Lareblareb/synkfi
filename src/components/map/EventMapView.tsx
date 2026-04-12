@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(197, 241, 53, 0.08)',
     borderWidth: 2,
     borderColor: 'rgba(197, 241, 53, 0.3)',
-    borderStyle: 'dashed',
+    /* borderStyle: 'dashed' not supported in RN */
     justifyContent: 'center',
     alignItems: 'center',
   },
