@@ -17,7 +17,8 @@ export const useConnections = () => {
 
   useEffect(() => {
     refresh();
-  }, [store.filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh]);
 
   return { ...store, refresh };
 };

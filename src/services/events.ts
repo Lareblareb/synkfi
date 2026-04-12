@@ -114,10 +114,6 @@ export const eventsService = {
       } as EventWithCreator;
     });
 
-    if (filters.distance < 50) {
-      return events.filter(() => true);
-    }
-
     return events;
   },
 

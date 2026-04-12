@@ -41,8 +41,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signUp: async (email, password, name) => {
     set({ isLoading: true, error: null });
     try {
-      await authService.signUp(email, password, name);
-      set({ isLoading: false });
+      const signUpResult = await authService.signUp(email, password, name);
+
+      // Auto-login after signup so user object is available for ProfileSetup
+      if (signUpResult.user) {
+        try {
+          const profile = await authService.getUserProfile(signUpResult.user.id);
+          set({
+            user: profile,
+            session: signUpResult.session,
+            isAuthenticated: true,
+            isProfileComplete: false,
+            isLoading: false,
+          });
+        } catch {
+          // If getUserProfile fails (e.g., profile not yet created), set basic user data
+          set({
+            user: {
+              id: signUpResult.user.id,
+              name,
+              email,
+              avatar_url: null,
+              bio: null,
+              location: null,
+              location_name: 'Helsinki, Finland',
+              sports: [],
+              sport_skills: null,
+              interests: null,
+              education: null,
+              photos: null,
+              age: null,
+              skill_level: 'beginner' as const,
+              availability: null,
+              fcm_token: null,
+              stripe_customer_id: null,
+              preferred_language: 'en',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            session: signUpResult.session,
+            isAuthenticated: true,
+            isProfileComplete: false,
+            isLoading: false,
+          });
+        }
+      } else {
+        set({ isLoading: false });
+      }
     } catch (err) {
       set({ isLoading: false, error: (err as Error).message });
       throw err;

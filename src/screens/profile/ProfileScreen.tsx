@@ -138,7 +138,7 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.navLinks}>
           <TouchableOpacity style={styles.navLink} onPress={() => navigation.navigate('Settings')}>
             <Ionicons name="settings-outline" size={20} color={colors.text.primary} />
-            <Text style={styles.navLinkText}>{t('settings')}</Text>
+            <Text style={styles.navLinkText}>{t('settings.title')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.navLink} onPress={() => navigation.navigate('About')}>

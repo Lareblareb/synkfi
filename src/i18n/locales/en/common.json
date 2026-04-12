@@ -38,6 +38,12 @@
   "studentRun": "Student-run",
   "experienceNeeded": "Experience needed",
   "connections": "Connections",
+  "skill": {
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "pro": "Pro"
+  },
   "nav": {
     "discovery": "Discovery",
     "events": "Events",

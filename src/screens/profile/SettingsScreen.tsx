@@ -60,7 +60,10 @@ export const SettingsScreen: React.FC = () => {
         {/* Account */}
         <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
         <View style={styles.settingsList}>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => Alert.alert(t('settings.changePassword'), 'Password change coming soon. Use "Forgot Password" from login screen.')}
+          >
             <Text style={styles.settingLabel}>{t('settings.changePassword')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
           </TouchableOpacity>

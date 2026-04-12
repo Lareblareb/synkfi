@@ -35,8 +35,8 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     return () => animation.stop();
   }, [opacity]);
 
-  const style: Animated.AnimatedProps<ViewStyle> = {
-    width: width as number,
+  const style = {
+    width,
     height,
     borderRadius,
     opacity,

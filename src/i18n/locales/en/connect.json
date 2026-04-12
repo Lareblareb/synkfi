@@ -14,6 +14,8 @@
   "connect": "Connect",
   "connected": "Connected",
   "pending": "Pending",
+  "accept": "Accept",
+  "decline": "Decline",
   "message": "Message",
   "viewProfile": "View Profile",
   "connectionSent": "Connection request sent!",

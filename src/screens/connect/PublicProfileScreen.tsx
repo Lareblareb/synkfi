@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Dimensions,
 } from 'react-native';
@@ -44,8 +44,16 @@ export const PublicProfileScreen: React.FC = () => {
     );
   }
 
-  const handleConnect = () => {
-    if (user) sendConnectionRequest(user.id, profile.id);
+  const [connectStatus, setConnectStatus] = useState(profile.connection_status);
+
+  const handleConnect = async () => {
+    if (!user) return;
+    try {
+      await sendConnectionRequest(user.id, profile.id);
+      setConnectStatus('pending_sent');
+    } catch (err) {
+      console.warn('Failed to send connection request:', err);
+    }
   };
 
   const sportSkills = (profile.sport_skills as Record<string, SkillLevel> | null) ?? {};
@@ -154,18 +162,18 @@ export const PublicProfileScreen: React.FC = () => {
         {/* Actions */}
         {profile.id !== user?.id && (
           <View style={styles.actions}>
-            {profile.connection_status === 'none' && (
+            {connectStatus === 'none' && (
               <TouchableOpacity style={styles.connectButton} onPress={handleConnect} activeOpacity={0.8}>
                 <Ionicons name="person-add-outline" size={18} color={colors.bg.primary} />
                 <Text style={styles.connectButtonText}>Connect</Text>
               </TouchableOpacity>
             )}
-            {profile.connection_status === 'pending_sent' && (
+            {connectStatus === 'pending_sent' && (
               <View style={styles.pendingButton}>
                 <Text style={styles.pendingText}>Request Sent</Text>
               </View>
             )}
-            {profile.connection_status === 'accepted' && (
+            {connectStatus === 'accepted' && (
               <>
                 <View style={styles.connectedButton}>
                   <Ionicons name="checkmark-circle" size={18} color={colors.success} />

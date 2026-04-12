@@ -35,10 +35,17 @@ export const EventDetailScreen: React.FC = () => {
 
   useEffect(() => {
     if (!event) return;
-    const channel = eventsService.subscribeToEvent(event.id, () => {
-      if (user) fetchEventById(event.id, user.id);
-    });
-    return () => { channel.unsubscribe(); };
+    let channel: { unsubscribe: () => void } | null = null;
+    try {
+      channel = eventsService.subscribeToEvent(event.id, () => {
+        if (user) fetchEventById(event.id, user.id);
+      });
+    } catch (err) {
+      console.warn('Failed to subscribe to event:', err);
+    }
+    return () => {
+      try { channel?.unsubscribe(); } catch { /* ignore */ }
+    };
   }, [event?.id]);
 
   const handleJoin = () => {
